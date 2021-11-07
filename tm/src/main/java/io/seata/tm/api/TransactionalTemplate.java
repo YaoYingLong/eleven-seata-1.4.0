@@ -119,12 +119,12 @@ public class TransactionalTemplate {
             try {
                 // 2. If the tx role is 'GlobalTransactionRole.Launcher', send the request of beginTransaction to TC,
                 //    else do nothing. Of course, the hooks will still be triggered.
-                beginTransaction(txInfo, tx);
+                beginTransaction(txInfo, tx); // 开启全局事务
 
                 Object rs;
                 try {
                     // Do Your Business
-                    rs = business.execute();
+                    rs = business.execute(); // 执行业务逻辑
                 } catch (Throwable ex) {
                     // 3. The needed business exception to rollback.
                     completeTransactionAfterThrowing(txInfo, tx, ex);
@@ -132,7 +132,7 @@ public class TransactionalTemplate {
                 }
 
                 // 4. everything is fine, commit.
-                commitTransaction(tx);
+                commitTransaction(tx); // 提交全局事务
 
                 return rs;
             } finally {
@@ -176,11 +176,10 @@ public class TransactionalTemplate {
         //roll back
         if (txInfo != null && txInfo.rollbackOn(originalException)) {
             try {
-                rollbackTransaction(tx, originalException);
+                rollbackTransaction(tx, originalException); // 异常回滚
             } catch (TransactionException txe) {
                 // Failed to rollback
-                throw new TransactionalExecutor.ExecutionException(tx, txe,
-                        TransactionalExecutor.Code.RollbackFailure, originalException);
+                throw new TransactionalExecutor.ExecutionException(tx, txe, TransactionalExecutor.Code.RollbackFailure, originalException);
             }
         } else {
             // not roll back on this exception, so commit
@@ -191,7 +190,7 @@ public class TransactionalTemplate {
     private void commitTransaction(GlobalTransaction tx) throws TransactionalExecutor.ExecutionException {
         try {
             triggerBeforeCommit();
-            tx.commit();
+            tx.commit(); // 提交全局事务
             triggerAfterCommit();
         } catch (TransactionException txe) {
             // 4.1 Failed to commit
@@ -212,7 +211,7 @@ public class TransactionalTemplate {
     private void beginTransaction(TransactionInfo txInfo, GlobalTransaction tx) throws TransactionalExecutor.ExecutionException {
         try {
             triggerBeforeBegin();
-            tx.begin(txInfo.getTimeOut(), txInfo.getName());
+            tx.begin(txInfo.getTimeOut(), txInfo.getName()); // 开启全局事务
             triggerAfterBegin();
         } catch (TransactionException txe) {
             throw new TransactionalExecutor.ExecutionException(tx, txe,

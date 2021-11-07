@@ -186,7 +186,6 @@ public class TableRecords implements java.io.Serializable {
         TableRecords records = new TableRecords(tmeta);
         ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
         int columnCount = resultSetMetaData.getColumnCount();
-
         while (resultSet.next()) {
             List<Field> fields = new ArrayList<>(columnCount);
             for (int i = 1; i <= columnCount; i++) {
@@ -240,13 +239,10 @@ public class TableRecords implements java.io.Serializable {
                     // JDBCType.DISTINCT, JDBCType.STRUCT etc...
                     field.setValue(resultSet.getObject(i));
                 }
-
                 fields.add(field);
             }
-
             Row row = new Row();
             row.setFields(fields);
-
             records.add(row);
         }
         return records;

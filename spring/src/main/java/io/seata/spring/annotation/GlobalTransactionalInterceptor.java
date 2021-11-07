@@ -80,8 +80,7 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
     private static volatile Integer degradeNum = 0;
     private static volatile Integer reachNum = 0;
     private static final EventBus EVENT_BUS = new GuavaEventBus("degradeCheckEventBus", true);
-    private static ScheduledThreadPoolExecutor executor =
-        new ScheduledThreadPoolExecutor(1, new NamedThreadFactory("degradeCheckWorker", 1, true));
+    private static ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1, new NamedThreadFactory("degradeCheckWorker", 1, true));
 
     //region DEFAULT_GLOBAL_TRANSACTION_TIMEOUT
 
@@ -91,15 +90,13 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
         if (GlobalTransactionalInterceptor.defaultGlobalTransactionTimeout <= 0) {
             int defaultGlobalTransactionTimeout;
             try {
-                defaultGlobalTransactionTimeout = ConfigurationFactory.getInstance().getInt(
-                        ConfigurationKeys.DEFAULT_GLOBAL_TRANSACTION_TIMEOUT, DEFAULT_GLOBAL_TRANSACTION_TIMEOUT);
+                defaultGlobalTransactionTimeout = ConfigurationFactory.getInstance().getInt(ConfigurationKeys.DEFAULT_GLOBAL_TRANSACTION_TIMEOUT, DEFAULT_GLOBAL_TRANSACTION_TIMEOUT);
             } catch (Exception e) {
                 LOGGER.error("Illegal global transaction timeout value: " + e.getMessage());
                 defaultGlobalTransactionTimeout = DEFAULT_GLOBAL_TRANSACTION_TIMEOUT;
             }
             if (defaultGlobalTransactionTimeout <= 0) {
-                LOGGER.warn("Global transaction timeout value '{}' is illegal, and has been reset to the default value '{}'",
-                        defaultGlobalTransactionTimeout, DEFAULT_GLOBAL_TRANSACTION_TIMEOUT);
+                LOGGER.warn("Global transaction timeout value '{}' is illegal, and has been reset to the default value '{}'", defaultGlobalTransactionTimeout, DEFAULT_GLOBAL_TRANSACTION_TIMEOUT);
                 defaultGlobalTransactionTimeout = DEFAULT_GLOBAL_TRANSACTION_TIMEOUT;
             }
             GlobalTransactionalInterceptor.defaultGlobalTransactionTimeout = defaultGlobalTransactionTimeout;
@@ -116,16 +113,12 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
      */
     public GlobalTransactionalInterceptor(FailureHandler failureHandler) {
         this.failureHandler = failureHandler == null ? DEFAULT_FAIL_HANDLER : failureHandler;
-        this.disable = ConfigurationFactory.getInstance().getBoolean(ConfigurationKeys.DISABLE_GLOBAL_TRANSACTION,
-            DEFAULT_DISABLE_GLOBAL_TRANSACTION);
-        degradeCheck = ConfigurationFactory.getInstance().getBoolean(ConfigurationKeys.CLIENT_DEGRADE_CHECK,
-            DEFAULT_TM_DEGRADE_CHECK);
+        this.disable = ConfigurationFactory.getInstance().getBoolean(ConfigurationKeys.DISABLE_GLOBAL_TRANSACTION, DEFAULT_DISABLE_GLOBAL_TRANSACTION);
+        degradeCheck = ConfigurationFactory.getInstance().getBoolean(ConfigurationKeys.CLIENT_DEGRADE_CHECK, DEFAULT_TM_DEGRADE_CHECK);
         if (degradeCheck) {
             ConfigurationCache.addConfigListener(ConfigurationKeys.CLIENT_DEGRADE_CHECK, this);
-            degradeCheckPeriod = ConfigurationFactory.getInstance().getInt(
-                ConfigurationKeys.CLIENT_DEGRADE_CHECK_PERIOD, DEFAULT_TM_DEGRADE_CHECK_PERIOD);
-            degradeCheckAllowTimes = ConfigurationFactory.getInstance().getInt(
-                ConfigurationKeys.CLIENT_DEGRADE_CHECK_ALLOW_TIMES, DEFAULT_TM_DEGRADE_CHECK_ALLOW_TIMES);
+            degradeCheckPeriod = ConfigurationFactory.getInstance().getInt(ConfigurationKeys.CLIENT_DEGRADE_CHECK_PERIOD, DEFAULT_TM_DEGRADE_CHECK_PERIOD);
+            degradeCheckAllowTimes = ConfigurationFactory.getInstance().getInt(ConfigurationKeys.CLIENT_DEGRADE_CHECK_ALLOW_TIMES, DEFAULT_TM_DEGRADE_CHECK_ALLOW_TIMES);
             EVENT_BUS.register(this);
             if (degradeCheckPeriod > 0 && degradeCheckAllowTimes > 0) {
                 startDegradeCheck();
@@ -136,19 +129,17 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
 
     @Override
     public Object invoke(final MethodInvocation methodInvocation) throws Throwable {
-        Class<?> targetClass =
-            methodInvocation.getThis() != null ? AopUtils.getTargetClass(methodInvocation.getThis()) : null;
+        Class<?> targetClass = methodInvocation.getThis() != null ? AopUtils.getTargetClass(methodInvocation.getThis()) : null;
         Method specificMethod = ClassUtils.getMostSpecificMethod(methodInvocation.getMethod(), targetClass);
         if (specificMethod != null && !specificMethod.getDeclaringClass().equals(Object.class)) {
             final Method method = BridgeMethodResolver.findBridgedMethod(specificMethod);
-            final GlobalTransactional globalTransactionalAnnotation =
-                getAnnotation(method, targetClass, GlobalTransactional.class);
+            final GlobalTransactional globalTransactionalAnnotation = getAnnotation(method, targetClass, GlobalTransactional.class);
             final GlobalLock globalLockAnnotation = getAnnotation(method, targetClass, GlobalLock.class);
             boolean localDisable = disable || (degradeCheck && degradeNum >= degradeCheckAllowTimes);
             if (!localDisable) {
-                if (globalTransactionalAnnotation != null) {
+                if (globalTransactionalAnnotation != null) { // 处理被标注了@GlobalTransactional注解的方法
                     return handleGlobalTransaction(methodInvocation, globalTransactionalAnnotation);
-                } else if (globalLockAnnotation != null) {
+                } else if (globalLockAnnotation != null) { // 处理被标注了@GlobalLock注解的方法
                     return handleGlobalLock(methodInvocation, globalLockAnnotation);
                 }
             }
@@ -174,8 +165,7 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
         });
     }
 
-    Object handleGlobalTransaction(final MethodInvocation methodInvocation,
-        final GlobalTransactional globalTrxAnno) throws Throwable {
+    Object handleGlobalTransaction(final MethodInvocation methodInvocation, final GlobalTransactional globalTrxAnno) throws Throwable {
         boolean succeed = true;
         try {
             return transactionalTemplate.execute(new TransactionalExecutor() {
@@ -187,19 +177,18 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
                 public String name() {
                     String name = globalTrxAnno.name();
                     if (!StringUtils.isNullOrEmpty(name)) {
-                        return name;
+                        return name; // 在@GlobalTransactional注解中声明了事务名称
                     }
-                    return formatMethod(methodInvocation.getMethod());
+                    return formatMethod(methodInvocation.getMethod()); // 被@GlobalTransactional注解标注的方法的签名
                 }
 
                 @Override
                 public TransactionInfo getTransactionInfo() {
                     // reset the value of timeout
-                    int timeout = globalTrxAnno.timeoutMills();
+                    int timeout = globalTrxAnno.timeoutMills(); // 全局事务超时时间
                     if (timeout <= 0 || timeout == DEFAULT_GLOBAL_TRANSACTION_TIMEOUT) {
                         timeout = defaultGlobalTransactionTimeout;
                     }
-
                     TransactionInfo transactionInfo = new TransactionInfo();
                     transactionInfo.setTimeOut(timeout);
                     transactionInfo.setName(name());

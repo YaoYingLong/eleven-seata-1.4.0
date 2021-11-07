@@ -92,8 +92,7 @@ public class EnhancedServiceLoader {
      * @return s s
      * @throws EnhancedServiceNotFoundException the enhanced service not found exception
      */
-    public static <S> S load(Class<S> service, String activateName, ClassLoader loader)
-            throws EnhancedServiceNotFoundException {
+    public static <S> S load(Class<S> service, String activateName, ClassLoader loader) throws EnhancedServiceNotFoundException {
         return InnerEnhancedServiceLoader.getServiceLoader(service).load(activateName, loader);
     }
 
@@ -107,8 +106,7 @@ public class EnhancedServiceLoader {
      * @return the s
      * @throws EnhancedServiceNotFoundException the enhanced service not found exception
      */
-    public static <S> S load(Class<S> service, String activateName, Object[] args)
-            throws EnhancedServiceNotFoundException {
+    public static <S> S load(Class<S> service, String activateName, Object[] args) throws EnhancedServiceNotFoundException {
         return InnerEnhancedServiceLoader.getServiceLoader(service).load(activateName, args, findClassLoader());
     }
 
@@ -123,8 +121,7 @@ public class EnhancedServiceLoader {
      * @return the s
      * @throws EnhancedServiceNotFoundException the enhanced service not found exception
      */
-    public static <S> S load(Class<S> service, String activateName, Class[] argsType, Object[] args)
-            throws EnhancedServiceNotFoundException {
+    public static <S> S load(Class<S> service, String activateName, Class[] argsType, Object[] args) throws EnhancedServiceNotFoundException {
         return InnerEnhancedServiceLoader.getServiceLoader(service).load(activateName, argsType, args, findClassLoader());
     }
 
@@ -192,13 +189,11 @@ public class EnhancedServiceLoader {
         private static final String SERVICES_DIRECTORY = "META-INF/services/";
         private static final String SEATA_DIRECTORY = "META-INF/seata/";
 
-        private static final ConcurrentMap<Class<?>, InnerEnhancedServiceLoader<?>> SERVICE_LOADERS =
-                new ConcurrentHashMap<>();
+        private static final ConcurrentMap<Class<?>, InnerEnhancedServiceLoader<?>> SERVICE_LOADERS = new ConcurrentHashMap<>();
 
         private final Class<S> type;
         private final Holder<List<ExtensionDefinition>> definitionsHolder = new Holder<>();
-        private final ConcurrentMap<ExtensionDefinition, Holder<Object>> definitionToInstanceMap =
-                new ConcurrentHashMap<>();
+        private final ConcurrentMap<ExtensionDefinition, Holder<Object>> definitionToInstanceMap = new ConcurrentHashMap<>();
         private final ConcurrentMap<String, List<ExtensionDefinition>> nameToDefinitionsMap = new ConcurrentHashMap<>();
         private final ConcurrentMap<Class<?>, ExtensionDefinition> classToDefinitionMap = new ConcurrentHashMap<>();
 
@@ -217,8 +212,7 @@ public class EnhancedServiceLoader {
             if (type == null) {
                 throw new IllegalArgumentException("Enhanced Service type == null");
             }
-            return (InnerEnhancedServiceLoader<S>)CollectionUtils.computeIfAbsent(SERVICE_LOADERS, type,
-                key -> new InnerEnhancedServiceLoader<>(type));
+            return (InnerEnhancedServiceLoader<S>)CollectionUtils.computeIfAbsent(SERVICE_LOADERS, type, key -> new InnerEnhancedServiceLoader<>(type));
         }
 
         /**
@@ -327,8 +321,7 @@ public class EnhancedServiceLoader {
         }
 
         @SuppressWarnings("rawtypes")
-        private S loadExtension(ClassLoader loader, Class[] argTypes,
-                                Object[] args) {
+        private S loadExtension(ClassLoader loader, Class[] argTypes, Object[] args) {
             try {
                 loadAllExtensionClass(loader);
                 ExtensionDefinition defaultExtensionDefinition = getDefaultExtensionDefinition();
@@ -371,8 +364,7 @@ public class EnhancedServiceLoader {
                 throw new EnhancedServiceNotFoundException("not found service provider for : " + type.getName());
             }
             if (Scope.SINGLETON.equals(definition.getScope())) {
-                Holder<Object> holder = CollectionUtils.computeIfAbsent(definitionToInstanceMap, definition,
-                    key -> new Holder<>());
+                Holder<Object> holder = CollectionUtils.computeIfAbsent(definitionToInstanceMap, definition, key -> new Holder<>());
                 Object instance = holder.get();
                 if (instance == null) {
                     synchronized (holder) {
@@ -448,8 +440,7 @@ public class EnhancedServiceLoader {
 
 
         @SuppressWarnings("rawtypes")
-        private void loadFile(String dir, ClassLoader loader, List<ExtensionDefinition> extensions)
-                throws IOException {
+        private void loadFile(String dir, ClassLoader loader, List<ExtensionDefinition> extensions) throws IOException {
             String fileName = dir + type.getName();
             Enumeration<java.net.URL> urls;
             if (loader != null) {
@@ -490,8 +481,7 @@ public class EnhancedServiceLoader {
             }
         }
 
-        private ExtensionDefinition getUnloadedExtensionDefinition(String className, ClassLoader loader)
-            throws ClassNotFoundException {
+        private ExtensionDefinition getUnloadedExtensionDefinition(String className, ClassLoader loader) throws ClassNotFoundException {
             //Check whether the definition has been loaded
             if (!isDefinitionContainsClazz(className, loader)) {
                 Class<?> clazz = Class.forName(className, true, loader);
@@ -507,8 +497,7 @@ public class EnhancedServiceLoader {
                 ExtensionDefinition result = new ExtensionDefinition(serviceName, priority, scope, clazz);
                 classToDefinitionMap.put(clazz, result);
                 if (serviceName != null) {
-                    CollectionUtils.computeIfAbsent(nameToDefinitionsMap, serviceName, e -> new ArrayList<>())
-                            .add(result);
+                    CollectionUtils.computeIfAbsent(nameToDefinitionsMap, serviceName, e -> new ArrayList<>()).add(result);
                 }
                 return result;
             }

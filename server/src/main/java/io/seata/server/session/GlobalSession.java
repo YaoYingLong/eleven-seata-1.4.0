@@ -15,15 +15,6 @@
  */
 package io.seata.server.session;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
 import io.seata.common.Constants;
 import io.seata.common.XID;
 import io.seata.common.util.StringUtils;
@@ -39,6 +30,15 @@ import io.seata.server.store.SessionStorable;
 import io.seata.server.store.StoreConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * The type Global session.
@@ -152,7 +152,7 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
         this.beginTime = System.currentTimeMillis();
         this.active = true;
         for (SessionLifecycleListener lifecycleListener : lifecycleListeners) {
-            lifecycleListener.onBegin(this);
+            lifecycleListener.onBegin(this); // 调用AbstractSessionManager的onBegin存储生成的GlobalSession
         }
     }
 
@@ -191,10 +191,10 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
     @Override
     public void end() throws TransactionException {
         // Clean locks first
-        clean();
+        clean(); // 释放锁
 
         for (SessionLifecycleListener lifecycleListener : lifecycleListeners) {
-            lifecycleListener.onEnd(this);
+            lifecycleListener.onEnd(this); // 删除全局事务信息
         }
 
     }
@@ -238,19 +238,19 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
         for (SessionLifecycleListener lifecycleListener : lifecycleListeners) {
             lifecycleListener.onAddBranch(this, branchSession);
         }
-        branchSession.setStatus(BranchStatus.Registered);
+        branchSession.setStatus(BranchStatus.Registered); // 设置分支session状态是已注册
         add(branchSession);
     }
 
     @Override
     public void removeBranch(BranchSession branchSession) throws TransactionException {
-        if (!branchSession.unlock()) {
+        if (!branchSession.unlock()) { // 释放全局锁，删除branch_table信息
             throw new TransactionException("Unlock branch lock failed!");
         }
         for (SessionLifecycleListener lifecycleListener : lifecycleListeners) {
-            lifecycleListener.onRemoveBranch(this, branchSession);
+            lifecycleListener.onRemoveBranch(this, branchSession); // 删除分支事务信息
         }
-        remove(branchSession);
+        remove(branchSession); // 移除缓存
     }
 
     /**
@@ -451,8 +451,7 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
      * @param timeout        the timeout
      * @return the global session
      */
-    public static GlobalSession createGlobalSession(String applicationId, String txServiceGroup, String txName,
-                                                    int timeout) {
+    public static GlobalSession createGlobalSession(String applicationId, String txServiceGroup, String txName, int timeout) {
         GlobalSession session = new GlobalSession(applicationId, txServiceGroup, txName, timeout);
         return session;
     }
@@ -646,10 +645,11 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
         return branchSessions;
     }
 
-    public void asyncCommit() throws TransactionException {
+    public void asyncCommit() throws TransactionException { // 被DefaultCoordinator#handleAsyncCommitting异步轮训处理AsyncCommitting任务
         this.addSessionLifecycleListener(SessionHolder.getAsyncCommittingSessionManager());
+        // 更新global_table表记录中对应数据状态status为1即Begin
         SessionHolder.getAsyncCommittingSessionManager().addGlobalSession(this);
-        this.changeStatus(GlobalStatus.AsyncCommitting);
+        this.changeStatus(GlobalStatus.AsyncCommitting); // 更新状态为GlobalStatus.AsyncCommitting
     }
 
     public void queueToRetryCommit() throws TransactionException {

@@ -61,8 +61,7 @@ import static io.seata.common.DefaultValues.DEFAULT_DISABLE_GLOBAL_TRANSACTION;
  *
  * @author slievrly
  */
-public class GlobalTransactionScanner extends AbstractAutoProxyCreator
-    implements ConfigurationChangeListener, InitializingBean, ApplicationContextAware, DisposableBean {
+public class GlobalTransactionScanner extends AbstractAutoProxyCreator implements ConfigurationChangeListener, InitializingBean, ApplicationContextAware, DisposableBean {
 
     private static final long serialVersionUID = 1L;
 
@@ -84,8 +83,7 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
     private final int mode;
     private String accessKey;
     private String secretKey;
-    private volatile boolean disableGlobalTransaction = ConfigurationFactory.getInstance().getBoolean(
-        ConfigurationKeys.DISABLE_GLOBAL_TRANSACTION, DEFAULT_DISABLE_GLOBAL_TRANSACTION);
+    private volatile boolean disableGlobalTransaction = ConfigurationFactory.getInstance().getBoolean(ConfigurationKeys.DISABLE_GLOBAL_TRANSACTION, DEFAULT_DISABLE_GLOBAL_TRANSACTION);
     private final AtomicBoolean initialized = new AtomicBoolean(false);
 
     private final FailureHandler failureHandlerHook;
@@ -192,12 +190,12 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
             throw new IllegalArgumentException(String.format("applicationId: %s, txServiceGroup: %s", applicationId, txServiceGroup));
         }
         //init TM
-        TMClient.init(applicationId, txServiceGroup, accessKey, secretKey);
+        TMClient.init(applicationId, txServiceGroup, accessKey, secretKey); // 初始化TMClient
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Transaction Manager Client is initialized. applicationId[{}] txServiceGroup[{}]", applicationId, txServiceGroup);
         }
         //init RM
-        RMClient.init(applicationId, txServiceGroup);
+        RMClient.init(applicationId, txServiceGroup); // 初始化RMClient
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Resource Manager is initialized. applicationId[{}] txServiceGroup[{}]", applicationId, txServiceGroup);
         }
@@ -240,38 +238,31 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
      */
     @Override
     protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) {
-        try {
+        try { // AOP逻辑，初始化Bean的后置处理器中调用此方法，添加全局事务拦截器
             synchronized (PROXYED_SET) {
                 if (PROXYED_SET.contains(beanName)) {
                     return bean;
                 }
                 interceptor = null;
                 //check TCC proxy
-                if (TCCBeanParserUtils.isTccAutoProxy(bean, beanName, applicationContext)) {
+                if (TCCBeanParserUtils.isTccAutoProxy(bean, beanName, applicationContext)) { // TCC模式
                     //TCC interceptor, proxy bean of sofa:reference/dubbo:reference, and LocalTCC
                     interceptor = new TccActionInterceptor(TCCBeanParserUtils.getRemotingDesc(beanName));
-                    ConfigurationCache.addConfigListener(ConfigurationKeys.DISABLE_GLOBAL_TRANSACTION,
-                        (ConfigurationChangeListener)interceptor);
-                } else {
+                    ConfigurationCache.addConfigListener(ConfigurationKeys.DISABLE_GLOBAL_TRANSACTION, (ConfigurationChangeListener)interceptor);
+                } else { // 使用@GlobalTransactional或者@GlobalLock注解
                     Class<?> serviceInterface = SpringProxyUtils.findTargetClass(bean);
                     Class<?>[] interfacesIfJdk = SpringProxyUtils.findInterfaces(bean);
-
-                    if (!existsAnnotation(new Class[]{serviceInterface})
-                        && !existsAnnotation(interfacesIfJdk)) {
-                        return bean;
+                    if (!existsAnnotation(new Class[]{serviceInterface}) && !existsAnnotation(interfacesIfJdk)) {
+                        return bean; // 若不存在@GlobalTransactional注解直接跳过生成AOP代理
                     }
-
                     if (interceptor == null) {
                         if (globalTransactionalInterceptor == null) {
                             globalTransactionalInterceptor = new GlobalTransactionalInterceptor(failureHandlerHook);
-                            ConfigurationCache.addConfigListener(
-                                ConfigurationKeys.DISABLE_GLOBAL_TRANSACTION,
-                                (ConfigurationChangeListener)globalTransactionalInterceptor);
+                            ConfigurationCache.addConfigListener(ConfigurationKeys.DISABLE_GLOBAL_TRANSACTION, (ConfigurationChangeListener)globalTransactionalInterceptor);
                         }
                         interceptor = globalTransactionalInterceptor;
                     }
                 }
-
                 LOGGER.info("Bean[{}] with name [{}] would use interceptor [{}]", bean.getClass().getName(), beanName, interceptor.getClass().getName());
                 if (!AopUtils.isAopProxy(bean)) {
                     bean = super.wrapIfNecessary(bean, beanName, cacheKey);
@@ -297,18 +288,18 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
                     continue;
                 }
                 GlobalTransactional trxAnno = clazz.getAnnotation(GlobalTransactional.class);
-                if (trxAnno != null) {
+                if (trxAnno != null) { // 类上是否被标注@GlobalTransactional注解
                     return true;
                 }
                 Method[] methods = clazz.getMethods();
                 for (Method method : methods) {
                     trxAnno = method.getAnnotation(GlobalTransactional.class);
-                    if (trxAnno != null) {
+                    if (trxAnno != null) { // 方法上是否被标注@GlobalTransactional注解
                         return true;
                     }
 
                     GlobalLock lockAnno = method.getAnnotation(GlobalLock.class);
-                    if (lockAnno != null) {
+                    if (lockAnno != null) {  // 方法上是否被标注@GlobalLock注解
                         return true;
                     }
                 }
@@ -322,15 +313,13 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
     }
 
     @Override
-    protected Object[] getAdvicesAndAdvisorsForBean(Class beanClass, String beanName, TargetSource customTargetSource)
-            throws BeansException {
+    protected Object[] getAdvicesAndAdvisorsForBean(Class beanClass, String beanName, TargetSource customTargetSource) throws BeansException {
         return new Object[]{interceptor};
     }
 
     @Override
-    public void afterPropertiesSet() {
-        ConfigurationCache.addConfigListener(ConfigurationKeys.DISABLE_GLOBAL_TRANSACTION,
-            (ConfigurationChangeListener)this);
+    public void afterPropertiesSet() { // 初始化TMClient以及RMClient
+        ConfigurationCache.addConfigListener(ConfigurationKeys.DISABLE_GLOBAL_TRANSACTION, (ConfigurationChangeListener)this);
         if (disableGlobalTransaction) {
             if (LOGGER.isInfoEnabled()) {
                 LOGGER.info("Global transaction is disabled.");
@@ -351,8 +340,7 @@ public class GlobalTransactionScanner extends AbstractAutoProxyCreator
     @Override
     public void onChangeEvent(ConfigurationChangeEvent event) {
         if (ConfigurationKeys.DISABLE_GLOBAL_TRANSACTION.equals(event.getDataId())) {
-            LOGGER.info("{} config changed, old value:{}, new value:{}", ConfigurationKeys.DISABLE_GLOBAL_TRANSACTION,
-                disableGlobalTransaction, event.getNewValue());
+            LOGGER.info("{} config changed, old value:{}, new value:{}", ConfigurationKeys.DISABLE_GLOBAL_TRANSACTION, disableGlobalTransaction, event.getNewValue());
             disableGlobalTransaction = Boolean.parseBoolean(event.getNewValue().trim());
             if (!disableGlobalTransaction && initialized.compareAndSet(false, true)) {
                 initClient();

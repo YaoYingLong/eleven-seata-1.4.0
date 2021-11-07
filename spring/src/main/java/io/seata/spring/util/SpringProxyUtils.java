@@ -51,8 +51,7 @@ public class SpringProxyUtils {
             AdvisedSupport advised = getAdvisedSupport(proxy);
             if (AopUtils.isJdkDynamicProxy(proxy)) {
                 TargetSource targetSource = advised.getTargetSource();
-                return targetSource instanceof EmptyTargetSource ? getFirstInterfaceByAdvised(advised)
-                    : targetSource.getTargetClass();
+                return targetSource instanceof EmptyTargetSource ? getFirstInterfaceByAdvised(advised) : targetSource.getTargetClass();
             }
             Object target = advised.getTargetSource().getTarget();
             return findTargetClass(target);

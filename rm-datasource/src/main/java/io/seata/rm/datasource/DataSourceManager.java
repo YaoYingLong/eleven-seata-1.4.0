@@ -77,10 +77,8 @@ public class DataSourceManager extends AbstractResourceManager implements Initia
             } else {
                 throw new RuntimeException("unknow situation!");
             }
-
             if (response.getResultCode() == ResultCode.Failed) {
-                throw new TransactionException(response.getTransactionExceptionCode(),
-                    "Response[" + response.getMsg() + "]");
+                throw new TransactionException(response.getTransactionExceptionCode(), "Response[" + response.getMsg() + "]");
             }
             return response.isLockable();
         } catch (TimeoutException toe) {
@@ -142,8 +140,7 @@ public class DataSourceManager extends AbstractResourceManager implements Initia
     }
 
     @Override
-    public BranchStatus branchRollback(BranchType branchType, String xid, long branchId, String resourceId,
-                                       String applicationData) throws TransactionException {
+    public BranchStatus branchRollback(BranchType branchType, String xid, long branchId, String resourceId, String applicationData) throws TransactionException {
         DataSourceProxy dataSourceProxy = get(resourceId);
         if (dataSourceProxy == null) {
             throw new ShouldNeverHappenException();
@@ -151,16 +148,14 @@ public class DataSourceManager extends AbstractResourceManager implements Initia
         try {
             UndoLogManagerFactory.getUndoLogManager(dataSourceProxy.getDbType()).undo(dataSourceProxy, xid, branchId);
         } catch (TransactionException te) {
-            StackTraceLogger.info(LOGGER, te,
-                "branchRollback failed. branchType:[{}], xid:[{}], branchId:[{}], resourceId:[{}], applicationData:[{}]. reason:[{}]",
-                new Object[]{branchType, xid, branchId, resourceId, applicationData, te.getMessage()});
+            StackTraceLogger.info(LOGGER, te, "branchRollback failed. branchType:[{}], xid:[{}], branchId:[{}], resourceId:[{}], applicationData:[{}]. reason:[{}]", new Object[]{branchType, xid, branchId, resourceId, applicationData, te.getMessage()});
             if (te.getCode() == TransactionExceptionCode.BranchRollbackFailed_Unretriable) {
                 return BranchStatus.PhaseTwo_RollbackFailed_Unretryable;
             } else {
                 return BranchStatus.PhaseTwo_RollbackFailed_Retryable;
             }
         }
-        return BranchStatus.PhaseTwo_Rollbacked;
+        return BranchStatus.PhaseTwo_Rollbacked; // 返回BranchStatus
 
     }
 

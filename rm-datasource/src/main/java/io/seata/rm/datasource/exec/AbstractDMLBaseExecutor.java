@@ -78,12 +78,12 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
     }
 
     @Override
-    public T doExecute(Object... args) throws Throwable {
+    public T doExecute(Object... args) throws Throwable { // 这里将事务的自动提交设置为手动提交
         AbstractConnectionProxy connectionProxy = statementProxy.getConnectionProxy();
         if (connectionProxy.getAutoCommit()) {
-            return executeAutoCommitTrue(args);
+            return executeAutoCommitTrue(args); // 本地事务提交逻辑，这里会将事务设置为手动提交
         } else {
-            return executeAutoCommitFalse(args);
+            return executeAutoCommitFalse(args); // 设置本地事务提交逻辑为手动提交
         }
     }
 
@@ -98,10 +98,10 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
         if (!JdbcConstants.MYSQL.equalsIgnoreCase(getDbType()) && isMultiPk()) {
             throw new NotSupportYetException("multi pk only support mysql!");
         }
-        TableRecords beforeImage = beforeImage();
-        T result = statementCallback.execute(statementProxy.getTargetStatement(), args);
-        TableRecords afterImage = afterImage(beforeImage);
-        prepareUndoLog(beforeImage, afterImage);
+        TableRecords beforeImage = beforeImage(); // 生成前置镜像
+        T result = statementCallback.execute(statementProxy.getTargetStatement(), args); // 执行业务SQL
+        TableRecords afterImage = afterImage(beforeImage); // BaseInsertExecutor生成后置镜像，为了查后置镜像事务隔离级别为读未提交
+        prepareUndoLog(beforeImage, afterImage); // 通过前置镜像和后置镜像生成undo log回滚日志
         return result;
     }
 
@@ -137,7 +137,7 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
     protected T executeAutoCommitTrue(Object[] args) throws Throwable {
         ConnectionProxy connectionProxy = statementProxy.getConnectionProxy();
         try {
-            connectionProxy.setAutoCommit(false);
+            connectionProxy.setAutoCommit(false); // 设置本地事务为手动提交
             return new LockRetryPolicy(connectionProxy).execute(() -> {
                 T result = executeAutoCommitFalse(args);
                 connectionProxy.commit();
@@ -182,7 +182,7 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
 
         @Override
         public <T> T execute(Callable<T> callable) throws Exception {
-            if (LOCK_RETRY_POLICY_BRANCH_ROLLBACK_ON_CONFLICT) {
+            if (LOCK_RETRY_POLICY_BRANCH_ROLLBACK_ON_CONFLICT) { // 默认为true
                 return doRetryOnLockConflict(callable);
             } else {
                 return callable.call();

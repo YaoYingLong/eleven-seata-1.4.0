@@ -73,7 +73,7 @@ public class ConnectionContext {
      * @param sqlUndoLog the sql undo log
      */
     void appendUndoItem(SQLUndoLog sqlUndoLog) {
-        sqlUndoItemsBuffer.add(sqlUndoLog);
+        sqlUndoItemsBuffer.add(sqlUndoLog); // 缓存undolog
     }
 
     /**
@@ -183,7 +183,7 @@ public class ConnectionContext {
      *
      * @return the string
      */
-    public String buildLockKeys() {
+    public String buildLockKeys() { // 获取全局锁的Key
         if (lockKeysBuffer.isEmpty()) {
             return null;
         }

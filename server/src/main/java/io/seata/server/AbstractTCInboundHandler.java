@@ -228,16 +228,14 @@ public abstract class AbstractTCInboundHandler extends AbstractExceptionHandler 
      * @param rpcContext the rpc context
      * @throws TransactionException the transaction exception
      */
-    protected abstract void doBranchReport(BranchReportRequest request, BranchReportResponse response,
-                                           RpcContext rpcContext) throws TransactionException;
+    protected abstract void doBranchReport(BranchReportRequest request, BranchReportResponse response, RpcContext rpcContext) throws TransactionException;
 
     @Override
     public GlobalLockQueryResponse handle(GlobalLockQueryRequest request, final RpcContext rpcContext) {
         GlobalLockQueryResponse response = new GlobalLockQueryResponse();
         exceptionHandleTemplate(new AbstractCallback<GlobalLockQueryRequest, GlobalLockQueryResponse>() {
             @Override
-            public void execute(GlobalLockQueryRequest request, GlobalLockQueryResponse response)
-                throws TransactionException {
+            public void execute(GlobalLockQueryRequest request, GlobalLockQueryResponse response) throws TransactionException {
                 try {
                     doLockCheck(request, response, rpcContext);
                 } catch (StoreException e) {

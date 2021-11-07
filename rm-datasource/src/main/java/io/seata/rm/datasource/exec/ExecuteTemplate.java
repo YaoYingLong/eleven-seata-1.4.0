@@ -66,16 +66,16 @@ public class ExecuteTemplate {
                                                      StatementProxy<S> statementProxy,
                                                      StatementCallback<T, S> statementCallback,
                                                      Object... args) throws SQLException {
+
         if (!RootContext.requireGlobalLock() && BranchType.AT != RootContext.getBranchType()) {
             // Just work as original statement
+            // 若不能获取到全局锁 或不是AT模式
             return statementCallback.execute(statementProxy.getTargetStatement(), args);
         }
 
         String dbType = statementProxy.getConnectionProxy().getDbType();
         if (CollectionUtils.isEmpty(sqlRecognizers)) {
-            sqlRecognizers = SQLVisitorFactory.get(
-                    statementProxy.getTargetSQL(),
-                    dbType);
+            sqlRecognizers = SQLVisitorFactory.get(statementProxy.getTargetSQL(), dbType);
         }
         Executor<T> executor;
         if (CollectionUtils.isEmpty(sqlRecognizers)) {
@@ -85,6 +85,7 @@ public class ExecuteTemplate {
                 SQLRecognizer sqlRecognizer = sqlRecognizers.get(0);
                 switch (sqlRecognizer.getSQLType()) {
                     case INSERT:
+                        // 根据具体的dbType以及@LoadLevel加载具体的InsertExecutor，这里以MySQLInsertExecutor为例
                         executor = EnhancedServiceLoader.load(InsertExecutor.class, dbType,
                                 new Class[]{StatementProxy.class, StatementCallback.class, SQLRecognizer.class},
                                 new Object[]{statementProxy, statementCallback, sqlRecognizer});
@@ -107,7 +108,7 @@ public class ExecuteTemplate {
             }
         }
         T rs;
-        try {
+        try { // 调用MySQLInsertExecutor的超类BaseTransactionalExecutor的execute方法
             rs = executor.execute(args);
         } catch (Throwable ex) {
             if (!(ex instanceof SQLException)) {

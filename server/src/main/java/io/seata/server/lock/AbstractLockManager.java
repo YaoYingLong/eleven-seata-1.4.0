@@ -50,13 +50,13 @@ public abstract class AbstractLockManager implements LockManager {
             // no lock
             return true;
         }
-        // get locks of branch
+        // get locks of branch 收集行锁
         List<RowLock> locks = collectRowLocks(branchSession);
         if (CollectionUtils.isEmpty(locks)) {
             // no lock
             return true;
         }
-        return getLocker(branchSession).acquireLock(locks);
+        return getLocker(branchSession).acquireLock(locks); // DB模式，调用DataBaseLocker
     }
 
     @Override
@@ -125,9 +125,7 @@ public abstract class AbstractLockManager implements LockManager {
         String xid = branchSession.getXid();
         String resourceId = branchSession.getResourceId();
         long transactionId = branchSession.getTransactionId();
-
         String lockKey = branchSession.getLockKey();
-
         return collectRowLocks(lockKey, resourceId, xid, transactionId, branchSession.getBranchId());
     }
 
@@ -153,8 +151,7 @@ public abstract class AbstractLockManager implements LockManager {
      * @param branchID      the branch id
      * @return the list
      */
-    protected List<RowLock> collectRowLocks(String lockKey, String resourceId, String xid, Long transactionId,
-                                            Long branchID) {
+    protected List<RowLock> collectRowLocks(String lockKey, String resourceId, String xid, Long transactionId, Long branchID) {
         List<RowLock> locks = new ArrayList<RowLock>();
 
         String[] tableGroupedLockKeys = lockKey.split(";");

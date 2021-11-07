@@ -97,7 +97,7 @@ public class DataBaseTransactionStoreManager extends AbstractTransactionStoreMan
     }
 
     @Override
-    public boolean writeSession(LogOperation logOperation, SessionStorable session) {
+    public boolean writeSession(LogOperation logOperation, SessionStorable session) { // 存储GlobalSession
         if (LogOperation.GLOBAL_ADD.equals(logOperation)) {
             return logStore.insertGlobalTransactionDO(SessionConverter.convertGlobalTransactionDO(session));
         } else if (LogOperation.GLOBAL_UPDATE.equals(logOperation)) {
@@ -153,7 +153,7 @@ public class DataBaseTransactionStoreManager extends AbstractTransactionStoreMan
      */
     @Override
     public GlobalSession readSession(String xid, boolean withBranchSessions) {
-        //global transaction
+        //global transaction 根据xid查询全局事务信息，查询global_table
         GlobalTransactionDO globalTransactionDO = logStore.queryGlobalTransactionDO(xid);
         if (globalTransactionDO == null) {
             return null;
@@ -161,7 +161,7 @@ public class DataBaseTransactionStoreManager extends AbstractTransactionStoreMan
         //branch transactions
         List<BranchTransactionDO> branchTransactionDOs = null;
         //reduce rpc with db when branchRegister and getGlobalStatus
-        if (withBranchSessions) {
+        if (withBranchSessions) { // 根据xid查询分支事务信息，查询branch_table
             branchTransactionDOs = logStore.queryBranchTransactionDO(globalTransactionDO.getXid());
         }
         return getGlobalSession(globalTransactionDO, branchTransactionDOs);
@@ -214,8 +214,7 @@ public class DataBaseTransactionStoreManager extends AbstractTransactionStoreMan
         return null;
     }
 
-    private GlobalSession getGlobalSession(GlobalTransactionDO globalTransactionDO,
-                                           List<BranchTransactionDO> branchTransactionDOs) {
+    private GlobalSession getGlobalSession(GlobalTransactionDO globalTransactionDO, List<BranchTransactionDO> branchTransactionDOs) {
         GlobalSession globalSession = SessionConverter.convertGlobalSession(globalTransactionDO);
         //branch transactions
         if (CollectionUtils.isNotEmpty(branchTransactionDOs)) {

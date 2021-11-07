@@ -112,9 +112,8 @@ public class ConnectionProxy extends AbstractConnectionProxy {
             return;
         }
         // Just check lock without requiring lock by now.
-        try {
-            boolean lockable = DefaultResourceManager.get().lockQuery(BranchType.AT,
-                getDataSourceProxy().getResourceId(), context.getXid(), lockKeys);
+        try { // RPC调用TC从lock_table中获取锁信息
+            boolean lockable = DefaultResourceManager.get().lockQuery(BranchType.AT, getDataSourceProxy().getResourceId(), context.getXid(), lockKeys);
             if (!lockable) {
                 throw new LockConflictException();
             }
@@ -146,7 +145,7 @@ public class ConnectionProxy extends AbstractConnectionProxy {
     }
 
     private void recognizeLockKeyConflictException(TransactionException te, String lockKeys) throws SQLException {
-        if (te.getCode() == TransactionExceptionCode.LockKeyConflict) {
+        if (te.getCode() == TransactionExceptionCode.LockKeyConflict) { // 是否为全局锁冲突
             StringBuilder reasonBuilder = new StringBuilder("get global lock fail, xid:");
             reasonBuilder.append(context.getXid());
             if (StringUtils.isNotBlank(lockKeys)) {
@@ -165,7 +164,7 @@ public class ConnectionProxy extends AbstractConnectionProxy {
      * @param sqlUndoLog the sql undo log
      */
     public void appendUndoLog(SQLUndoLog sqlUndoLog) {
-        context.appendUndoItem(sqlUndoLog);
+        context.appendUndoItem(sqlUndoLog);  // 缓存undolog
     }
 
     /**
@@ -196,18 +195,18 @@ public class ConnectionProxy extends AbstractConnectionProxy {
 
     private void doCommit() throws SQLException {
         if (context.inGlobalTransaction()) {
-            processGlobalTransactionCommit();
+            processGlobalTransactionCommit();  // 分支事务注册，发起BranchRegisterRequest请求，返回分支branchId，保存undolog，数据库本地事务提交
         } else if (context.isGlobalLockRequire()) {
-            processLocalCommitWithGlobalLocks();
+            processLocalCommitWithGlobalLocks(); // 数据库本地事务提交
         } else {
-            targetConnection.commit();
+            targetConnection.commit(); // 数据库本地事务提交
         }
     }
 
     private void processLocalCommitWithGlobalLocks() throws SQLException {
         checkLock(context.buildLockKeys());
         try {
-            targetConnection.commit();
+            targetConnection.commit(); // 数据库本地事务提交
         } catch (Throwable ex) {
             throw new SQLException(ex);
         }
@@ -216,13 +215,13 @@ public class ConnectionProxy extends AbstractConnectionProxy {
 
     private void processGlobalTransactionCommit() throws SQLException {
         try {
-            register();
+            register(); // 注册分支事务
         } catch (TransactionException e) {
             recognizeLockKeyConflictException(e, context.buildLockKeys());
         }
-        try {
-            UndoLogManagerFactory.getUndoLogManager(this.getDbType()).flushUndoLogs(this);
-            targetConnection.commit();
+        try { // 根据具体的dbType获取具体的UndoLogManager，这里以MySQLUndoLogManager为例
+            UndoLogManagerFactory.getUndoLogManager(this.getDbType()).flushUndoLogs(this); // 保存undolog
+            targetConnection.commit(); // 数据库本地事务提交
         } catch (Throwable ex) {
             LOGGER.error("process connectionProxy commit error: {}", ex.getMessage(), ex);
             report(false);
@@ -238,6 +237,7 @@ public class ConnectionProxy extends AbstractConnectionProxy {
         if (!context.hasUndoLog() || context.getLockKeysBuffer().isEmpty()) {
             return;
         }
+        // 分支事务注册，发起BranchRegisterRequest请求，返回分支branchId
         Long branchId = DefaultResourceManager.get().branchRegister(BranchType.AT, getDataSourceProxy().getResourceId(),
             null, context.getXid(), null, context.buildLockKeys());
         context.setBranchId(branchId);
@@ -288,9 +288,9 @@ public class ConnectionProxy extends AbstractConnectionProxy {
             .getInstance().getBoolean(ConfigurationKeys.CLIENT_LOCK_RETRY_POLICY_BRANCH_ROLLBACK_ON_CONFLICT, DEFAULT_CLIENT_LOCK_RETRY_POLICY_BRANCH_ROLLBACK_ON_CONFLICT);
 
         public <T> T execute(Callable<T> callable) throws Exception {
-            if (LOCK_RETRY_POLICY_BRANCH_ROLLBACK_ON_CONFLICT) {
+            if (LOCK_RETRY_POLICY_BRANCH_ROLLBACK_ON_CONFLICT) { // 默认为true
                 return callable.call();
-            } else {
+            } else { // 若为false，会有锁的重试机制
                 return doRetryOnLockConflict(callable);
             }
         }
@@ -299,9 +299,9 @@ public class ConnectionProxy extends AbstractConnectionProxy {
             LockRetryController lockRetryController = new LockRetryController();
             while (true) {
                 try {
-                    return callable.call();
+                    return callable.call(); // 调用doCommit()方法分支事务注册
                 } catch (LockConflictException lockConflict) {
-                    onException(lockConflict);
+                    onException(lockConflict); // LockRetryPolicy清理undo日志，锁的key，且本地事务回滚
                     lockRetryController.sleep(lockConflict);
                 } catch (Exception e) {
                     onException(e);

@@ -63,7 +63,7 @@ public abstract class AbstractResourceManager implements ResourceManager {
             request.setResourceId(resourceId);
             request.setBranchType(branchType);
             request.setApplicationData(applicationData);
-
+            // RPC同步调用seata-server服务TC注册分支事务：DefaultCoordinator#doBranchRegister
             BranchRegisterResponse response = (BranchRegisterResponse) RmNettyRemotingClient.getInstance().sendSyncRequest(request);
             if (response.getResultCode() == ResultCode.Failed) {
                 throw new RmTransactionException(response.getTransactionExceptionCode(), String.format("Response[ %s ]", response.getMsg()));

@@ -39,8 +39,7 @@ import org.slf4j.LoggerFactory;
  * @author funkye
  */
 @LoadLevel(name = "redis", scope = Scope.PROTOTYPE)
-public class RedisSessionManager extends AbstractSessionManager
-    implements Initialize {
+public class RedisSessionManager extends AbstractSessionManager implements Initialize {
     /**
      * The constant LOGGER.
      */

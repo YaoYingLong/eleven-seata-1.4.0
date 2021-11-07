@@ -67,7 +67,7 @@ public abstract class AbstractSessionManager implements SessionManager, SessionL
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("MANAGER[" + name + "] SESSION[" + session + "] " + LogOperation.GLOBAL_ADD);
         }
-        writeSession(LogOperation.GLOBAL_ADD, session);
+        writeSession(LogOperation.GLOBAL_ADD, session); // 更新global_table表记录中对应数据状态status为1即Begin
     }
 
     @Override
@@ -114,7 +114,7 @@ public abstract class AbstractSessionManager implements SessionManager, SessionL
 
     @Override
     public void onBegin(GlobalSession globalSession) throws TransactionException {
-        addGlobalSession(globalSession);
+        addGlobalSession(globalSession); // 调用具体的SessionManager的addGlobalSession方法存储生成的GlobalSession
     }
 
     @Override

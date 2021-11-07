@@ -114,7 +114,7 @@ public class SessionHelper {
         } else {
             globalSession.changeStatus(GlobalStatus.Rollbacked);
         }
-        globalSession.end();
+        globalSession.end(); // 释放锁，删除全局事务信息
     }
 
     /**

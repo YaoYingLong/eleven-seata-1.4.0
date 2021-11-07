@@ -50,27 +50,28 @@ public class DefaultTransactionManager implements TransactionManager {
         GlobalBeginRequest request = new GlobalBeginRequest();
         request.setTransactionName(name);
         request.setTimeout(timeout);
-        GlobalBeginResponse response = (GlobalBeginResponse) syncCall(request);
+        GlobalBeginResponse response = (GlobalBeginResponse) syncCall(request); // 同步RPC调用Seata-Server服务获取全局事务id
         if (response.getResultCode() == ResultCode.Failed) {
             throw new TmTransactionException(TransactionExceptionCode.BeginFailed, response.getMsg());
         }
-        return response.getXid();
+        return response.getXid(); // 获取RPC调用返回的全局事务Id，xid结构：idAddress + ":" + port + ":" + tranId
     }
 
     @Override
     public GlobalStatus commit(String xid) throws TransactionException {
         GlobalCommitRequest globalCommit = new GlobalCommitRequest();
         globalCommit.setXid(xid);
+        // 发起全局事务提交，发起GlobalCommitRequest请求，RPC调用DefaultCoordinator#doGlobalCommit
         GlobalCommitResponse response = (GlobalCommitResponse) syncCall(globalCommit);
         return response.getGlobalStatus();
     }
 
     @Override
-    public GlobalStatus rollback(String xid) throws TransactionException {
+    public GlobalStatus rollback(String xid) throws TransactionException { // 调用seata-server发起GlobalRollbackRequest
         GlobalRollbackRequest globalRollback = new GlobalRollbackRequest();
         globalRollback.setXid(xid);
-        GlobalRollbackResponse response = (GlobalRollbackResponse) syncCall(globalRollback);
-        return response.getGlobalStatus();
+        GlobalRollbackResponse response = (GlobalRollbackResponse) syncCall(globalRollback); // RPC调用DefaultCoordinator#doGlobalRollback
+        return response.getGlobalStatus(); // 获取RPC调用返回的全局事务状态
     }
 
     @Override

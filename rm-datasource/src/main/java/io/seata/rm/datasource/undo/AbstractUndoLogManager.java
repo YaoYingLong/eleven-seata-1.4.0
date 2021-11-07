@@ -216,9 +216,8 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Flushing UNDO LOG: {}", new String(undoLogContent, Constants.DEFAULT_CHARSET));
         }
-
-        insertUndoLogWithNormal(xid, branchId, buildContext(parser.getName()), undoLogContent,
-            cp.getTargetConnection());
+        // 调用MySQLUndoLogManager的insertUndoLog方法
+        insertUndoLogWithNormal(xid, branchId, buildContext(parser.getName()), undoLogContent, cp.getTargetConnection());
     }
 
     /**
@@ -245,7 +244,7 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
                     conn.setAutoCommit(false);
                 }
 
-                // Find UNDO LOG
+                // Find UNDO LOG 找到undolog
                 selectPST = conn.prepareStatement(SELECT_UNDO_LOG_SQL);
                 selectPST.setLong(1, branchId);
                 selectPST.setString(2, xid);
@@ -286,9 +285,8 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
                             TableMeta tableMeta = TableMetaCacheFactory.getTableMetaCache(dataSourceProxy.getDbType()).getTableMeta(
                                 conn, sqlUndoLog.getTableName(), dataSourceProxy.getResourceId());
                             sqlUndoLog.setTableMeta(tableMeta);
-                            AbstractUndoExecutor undoExecutor = UndoExecutorFactory.getUndoExecutor(
-                                dataSourceProxy.getDbType(), sqlUndoLog);
-                            undoExecutor.executeOn(conn);
+                            AbstractUndoExecutor undoExecutor = UndoExecutorFactory.getUndoExecutor(dataSourceProxy.getDbType(), sqlUndoLog);
+                            undoExecutor.executeOn(conn); // 执行rollback补偿
                         }
                     } finally {
                         // remove serializer name
@@ -306,11 +304,10 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
                 // See https://github.com/seata/seata/issues/489
 
                 if (exists) {
-                    deleteUndoLog(xid, branchId, conn);
+                    deleteUndoLog(xid, branchId, conn); // 删除undo_log
                     conn.commit();
                     if (LOGGER.isInfoEnabled()) {
-                        LOGGER.info("xid {} branch {}, undo_log deleted with {}", xid, branchId,
-                            State.GlobalFinished.name());
+                        LOGGER.info("xid {} branch {}, undo_log deleted with {}", xid, branchId, State.GlobalFinished.name());
                     }
                 } else {
                     insertUndoLogWithGlobalFinished(xid, branchId, UndoLogParserFactory.getInstance(), conn);
@@ -320,7 +317,6 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
                             State.GlobalFinished.name());
                     }
                 }
-
                 return;
             } catch (SQLIntegrityConstraintViolationException e) {
                 // Possible undo_log has been inserted into the database by other processes, retrying rollback undo_log
@@ -335,9 +331,7 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
                         LOGGER.warn("Failed to close JDBC resource while undo ... ", rollbackEx);
                     }
                 }
-                throw new BranchTransactionException(BranchRollbackFailed_Retriable, String
-                    .format("Branch session rollback failed and try again later xid = %s branchId = %s %s", xid,
-                        branchId, e.getMessage()), e);
+                throw new BranchTransactionException(BranchRollbackFailed_Retriable, String.format("Branch session rollback failed and try again later xid = %s branchId = %s %s", xid, branchId, e.getMessage()), e);
 
             } finally {
                 try {

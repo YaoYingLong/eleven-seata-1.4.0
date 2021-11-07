@@ -42,8 +42,7 @@ import org.slf4j.LoggerFactory;
  * @author zhangsen
  */
 @LoadLevel(name = "db", scope = Scope.PROTOTYPE)
-public class DataBaseSessionManager extends AbstractSessionManager
-    implements Initialize {
+public class DataBaseSessionManager extends AbstractSessionManager implements Initialize {
 
     /**
      * The constant LOGGER.
@@ -80,6 +79,7 @@ public class DataBaseSessionManager extends AbstractSessionManager
     @Override
     public void addGlobalSession(GlobalSession session) throws TransactionException {
         if (StringUtils.isBlank(taskName)) {
+            // 调用实现类DataBaseTransactionStoreManager的writeSession，将全局事务信息插入global_table表中
             boolean ret = transactionStoreManager.writeSession(LogOperation.GLOBAL_ADD, session);
             if (!ret) {
                 throw new StoreException("addGlobalSession failed.");
@@ -113,7 +113,7 @@ public class DataBaseSessionManager extends AbstractSessionManager
      */
     @Override
     public void removeGlobalSession(GlobalSession session) throws TransactionException {
-        boolean ret = transactionStoreManager.writeSession(LogOperation.GLOBAL_REMOVE, session);
+        boolean ret = transactionStoreManager.writeSession(LogOperation.GLOBAL_REMOVE, session); // 删除global_table表记录
         if (!ret) {
             throw new StoreException("removeGlobalSession failed.");
         }
@@ -124,6 +124,7 @@ public class DataBaseSessionManager extends AbstractSessionManager
         if (StringUtils.isNotBlank(taskName)) {
             return;
         }
+        // 将分支事务信息插入branch_table表中
         boolean ret = transactionStoreManager.writeSession(LogOperation.BRANCH_ADD, session);
         if (!ret) {
             throw new StoreException("addBranchSession failed.");
@@ -163,7 +164,7 @@ public class DataBaseSessionManager extends AbstractSessionManager
     }
 
     @Override
-    public Collection<GlobalSession> allSessions() {
+    public Collection<GlobalSession> allSessions() { // DB模式，默认限制每次100条
         // get by taskName
         if (SessionHolder.ASYNC_COMMITTING_SESSION_MANAGER_NAME.equalsIgnoreCase(taskName)) {
             return findGlobalSessions(new SessionCondition(GlobalStatus.AsyncCommitting));
@@ -189,8 +190,7 @@ public class DataBaseSessionManager extends AbstractSessionManager
     }
 
     @Override
-    public <T> T lockAndExecute(GlobalSession globalSession, GlobalSession.LockCallable<T> lockCallable)
-            throws TransactionException {
+    public <T> T lockAndExecute(GlobalSession globalSession, GlobalSession.LockCallable<T> lockCallable) throws TransactionException {
         return lockCallable.call();
     }
 }

@@ -89,6 +89,7 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
 
     @Override
     public void begin(int timeout, String name) throws TransactionException {
+        // 调用者业务方法可能多重嵌套创建多个GlobalTransaction对象开启事务方法，故GlobalTransaction有GlobalTransactionRole角色属性，只有Launcher角色的才有开启、提交、回滚事务的权利
         if (role != GlobalTransactionRole.Launcher) {
             assertXIDNotNull();
             if (LOGGER.isDebugEnabled()) {
@@ -102,9 +103,9 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
             throw new IllegalStateException("Global transaction already exists," +
                 " can't begin a new global transaction, currentXid = " + currentXid);
         }
-        xid = transactionManager.begin(null, null, name, timeout);
-        status = GlobalStatus.Begin;
-        RootContext.bind(xid);
+        xid = transactionManager.begin(null, null, name, timeout); // 获取全局事务id
+        status = GlobalStatus.Begin; // 设置全局事务未begin状态
+        RootContext.bind(xid); // 将xid保存到线程上下文中
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Begin new global transaction [{}]", xid);
         }
@@ -112,6 +113,7 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
 
     @Override
     public void commit() throws TransactionException {
+        // 调用者业务方法可能多重嵌套创建多个GlobalTransaction对象开启事务方法，故GlobalTransaction有GlobalTransactionRole角色属性，只有Launcher角色的才有开启、提交、回滚事务的权利
         if (role == GlobalTransactionRole.Participant) {
             // Participant has no responsibility of committing
             if (LOGGER.isDebugEnabled()) {
@@ -123,8 +125,8 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
         int retry = COMMIT_RETRY_COUNT <= 0 ? DEFAULT_TM_COMMIT_RETRY_COUNT : COMMIT_RETRY_COUNT;
         try {
             while (retry > 0) {
-                try {
-                    status = transactionManager.commit(xid);
+                try { // 发起全局事务提交，发起GlobalCommitRequest请求，RPC调用DefaultCoordinator#doGlobalCommit
+                    status = transactionManager.commit(xid); // 提交全局事务，若异常则重试，默认5次
                     break;
                 } catch (Throwable ex) {
                     LOGGER.error("Failed to report global commit [{}],Retry Countdown: {}, reason: {}", this.getXid(), retry, ex.getMessage());
@@ -146,6 +148,7 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
 
     @Override
     public void rollback() throws TransactionException {
+        // 调用者业务方法可能多重嵌套创建多个GlobalTransaction对象开启事务方法，故GlobalTransaction有GlobalTransactionRole角色属性，只有Launcher角色的才有开启、提交、回滚事务的权利
         if (role == GlobalTransactionRole.Participant) {
             // Participant has no responsibility of rollback
             if (LOGGER.isDebugEnabled()) {
@@ -158,7 +161,7 @@ public class DefaultGlobalTransaction implements GlobalTransaction {
         int retry = ROLLBACK_RETRY_COUNT <= 0 ? DEFAULT_TM_ROLLBACK_RETRY_COUNT : ROLLBACK_RETRY_COUNT;
         try {
             while (retry > 0) {
-                try {
+                try { // 调用DefaultTransactionManager获取回滚状态，出现异常会进行重试，默认5次
                     status = transactionManager.rollback(xid);
                     break;
                 } catch (Throwable ex) {

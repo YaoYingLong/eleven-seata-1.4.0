@@ -77,8 +77,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
     /**
      * The constant COMMITTING_RETRY_PERIOD.
      */
-    protected static final long COMMITTING_RETRY_PERIOD = CONFIG.getLong(ConfigurationKeys.COMMITING_RETRY_PERIOD,
-        1000L);
+    protected static final long COMMITTING_RETRY_PERIOD = CONFIG.getLong(ConfigurationKeys.COMMITING_RETRY_PERIOD, 1000L);
 
     /**
      * The constant ASYNC_COMMITTING_RETRY_PERIOD.
@@ -89,8 +88,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
     /**
      * The constant ROLLBACKING_RETRY_PERIOD.
      */
-    protected static final long ROLLBACKING_RETRY_PERIOD = CONFIG.getLong(ConfigurationKeys.ROLLBACKING_RETRY_PERIOD,
-        1000L);
+    protected static final long ROLLBACKING_RETRY_PERIOD = CONFIG.getLong(ConfigurationKeys.ROLLBACKING_RETRY_PERIOD, 1000L);
 
     /**
      * The constant TIMEOUT_RETRY_PERIOD.
@@ -151,26 +149,21 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
     }
 
     @Override
-    protected void doGlobalBegin(GlobalBeginRequest request, GlobalBeginResponse response, RpcContext rpcContext)
-        throws TransactionException {
-        response.setXid(core.begin(rpcContext.getApplicationId(), rpcContext.getTransactionServiceGroup(),
-            request.getTransactionName(), request.getTimeout()));
+    protected void doGlobalBegin(GlobalBeginRequest request, GlobalBeginResponse response, RpcContext rpcContext) throws TransactionException {
+        response.setXid(core.begin(rpcContext.getApplicationId(), rpcContext.getTransactionServiceGroup(), request.getTransactionName(), request.getTimeout()));
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("Begin new global transaction applicationId: {},transactionServiceGroup: {}, transactionName: {},timeout:{},xid:{}",
-                rpcContext.getApplicationId(), rpcContext.getTransactionServiceGroup(), request.getTransactionName(), request.getTimeout(), response.getXid());
+            LOGGER.info("Begin new global transaction applicationId: {},transactionServiceGroup: {}, transactionName: {},timeout:{},xid:{}", rpcContext.getApplicationId(), rpcContext.getTransactionServiceGroup(), request.getTransactionName(), request.getTimeout(), response.getXid());
         }
     }
 
     @Override
-    protected void doGlobalCommit(GlobalCommitRequest request, GlobalCommitResponse response, RpcContext rpcContext)
-        throws TransactionException {
+    protected void doGlobalCommit(GlobalCommitRequest request, GlobalCommitResponse response, RpcContext rpcContext) throws TransactionException {
         response.setGlobalStatus(core.commit(request.getXid()));
     }
 
     @Override
-    protected void doGlobalRollback(GlobalRollbackRequest request, GlobalRollbackResponse response,
-                                    RpcContext rpcContext) throws TransactionException {
-        response.setGlobalStatus(core.rollback(request.getXid()));
+    protected void doGlobalRollback(GlobalRollbackRequest request, GlobalRollbackResponse response, RpcContext rpcContext) throws TransactionException {
+        response.setGlobalStatus(core.rollback(request.getXid())); // 全局事务回滚
     }
 
     @Override
@@ -186,10 +179,9 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
     }
 
     @Override
-    protected void doBranchRegister(BranchRegisterRequest request, BranchRegisterResponse response,
-                                    RpcContext rpcContext) throws TransactionException {
-        response.setBranchId(
-            core.branchRegister(request.getBranchType(), request.getResourceId(), rpcContext.getClientId(),
+    protected void doBranchRegister(BranchRegisterRequest request, BranchRegisterResponse response, RpcContext rpcContext) throws TransactionException {
+        // 注册分支事务，返回branchId
+        response.setBranchId(core.branchRegister(request.getBranchType(), request.getResourceId(), rpcContext.getClientId(),
                 request.getXid(), request.getApplicationData(), request.getLockKey()));
     }
 
@@ -203,8 +195,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
     @Override
     protected void doLockCheck(GlobalLockQueryRequest request, GlobalLockQueryResponse response, RpcContext rpcContext)
         throws TransactionException {
-        response.setLockable(
-            core.lockQuery(request.getBranchType(), request.getResourceId(), request.getXid(), request.getLockKey()));
+        response.setLockable(core.lockQuery(request.getBranchType(), request.getResourceId(), request.getXid(), request.getLockKey()));
     }
 
     /**
@@ -326,8 +317,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
      * Handle async committing.
      */
     protected void handleAsyncCommitting() {
-        Collection<GlobalSession> asyncCommittingSessions = SessionHolder.getAsyncCommittingSessionManager()
-            .allSessions();
+        Collection<GlobalSession> asyncCommittingSessions = SessionHolder.getAsyncCommittingSessionManager().allSessions();
         if (CollectionUtils.isEmpty(asyncCommittingSessions)) {
             return;
         }
@@ -377,7 +367,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
     public void init() {
         retryRollbacking.scheduleAtFixedRate(() -> {
             try {
-                handleRetryRollbacking();
+                handleRetryRollbacking(); // 初始化retryRollbacking定时任务线程池，默认间隔1s
             } catch (Exception e) {
                 LOGGER.info("Exception retry rollbacking ... ", e);
             }
@@ -385,7 +375,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
 
         retryCommitting.scheduleAtFixedRate(() -> {
             try {
-                handleRetryCommitting();
+                handleRetryCommitting(); // 初始化handleRetryCommitting定时任务线程池，默认间隔1s
             } catch (Exception e) {
                 LOGGER.info("Exception retry committing ... ", e);
             }
@@ -393,7 +383,7 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
 
         asyncCommitting.scheduleAtFixedRate(() -> {
             try {
-                handleAsyncCommitting();
+                handleAsyncCommitting();  // 初始化handleAsyncCommitting定时任务线程池，默认间隔1s
             } catch (Exception e) {
                 LOGGER.info("Exception async committing ... ", e);
             }

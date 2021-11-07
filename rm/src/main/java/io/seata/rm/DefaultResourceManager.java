@@ -90,11 +90,9 @@ public class DefaultResourceManager implements ResourceManager {
     }
 
     @Override
-    public Long branchRegister(BranchType branchType, String resourceId,
-                               String clientId, String xid, String applicationData, String lockKeys)
-        throws TransactionException {
-        return getResourceManager(branchType).branchRegister(branchType, resourceId, clientId, xid, applicationData,
-            lockKeys);
+    public Long branchRegister(BranchType branchType, String resourceId, String clientId, String xid, String applicationData, String lockKeys) throws TransactionException {
+        // 调用AbstractResourceManager分支事务注册，发起BranchRegisterRequest请求，返回分支branchId
+        return getResourceManager(branchType).branchRegister(branchType, resourceId, clientId, xid, applicationData, lockKeys);
     }
 
     @Override

@@ -106,11 +106,10 @@ public abstract class BaseTransactionalExecutor<T, S extends Statement> implemen
     public T execute(Object... args) throws Throwable {
         String xid = RootContext.getXID();
         if (xid != null) {
-            statementProxy.getConnectionProxy().bind(xid);
+            statementProxy.getConnectionProxy().bind(xid); // 绑定全局事务Id
         }
-
         statementProxy.getConnectionProxy().setGlobalLockRequire(RootContext.requireGlobalLock());
-        return doExecute(args);
+        return doExecute(args); // 调用超类AbstractDMLBaseExecutor的doExecute
     }
 
     /**
@@ -269,15 +268,14 @@ public abstract class BaseTransactionalExecutor<T, S extends Statement> implemen
         if (beforeImage.getRows().isEmpty() && afterImage.getRows().isEmpty()) {
             return;
         }
-
         ConnectionProxy connectionProxy = statementProxy.getConnectionProxy();
 
         TableRecords lockKeyRecords = sqlRecognizer.getSQLType() == SQLType.DELETE ? beforeImage : afterImage;
         String lockKeys = buildLockKey(lockKeyRecords);
         connectionProxy.appendLockKey(lockKeys);
 
-        SQLUndoLog sqlUndoLog = buildUndoItem(beforeImage, afterImage);
-        connectionProxy.appendUndoLog(sqlUndoLog);
+        SQLUndoLog sqlUndoLog = buildUndoItem(beforeImage, afterImage); // 将前置镜像和后置镜像封装为SQLUndoLog
+        connectionProxy.appendUndoLog(sqlUndoLog);  // 缓存sqlUndoLog对象
     }
 
     /**
@@ -290,7 +288,6 @@ public abstract class BaseTransactionalExecutor<T, S extends Statement> implemen
         if (rowsIncludingPK.size() == 0) {
             return null;
         }
-
         StringBuilder sb = new StringBuilder();
         sb.append(rowsIncludingPK.getTableMeta().getTableName());
         sb.append(":");
@@ -382,7 +379,6 @@ public abstract class BaseTransactionalExecutor<T, S extends Statement> implemen
         ResultSet rs = null;
         try {
             ps = statementProxy.getConnection().prepareStatement(sql.toString());
-
             int paramIndex = 1;
             for (int r = 0; r < rowSize; r++) {
                 for (int c = 0; c < pkColumnNameList.size(); c++) {

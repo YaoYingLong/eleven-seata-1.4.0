@@ -71,8 +71,7 @@ public class MySQLUndoLogManager extends AbstractUndoLogManager {
     }
 
     @Override
-    protected void insertUndoLogWithNormal(String xid, long branchId, String rollbackCtx,
-                                           byte[] undoLogContent, Connection conn) throws SQLException {
+    protected void insertUndoLogWithNormal(String xid, long branchId, String rollbackCtx, byte[] undoLogContent, Connection conn) throws SQLException {
         insertUndoLog(xid, branchId, rollbackCtx, undoLogContent, State.Normal, conn);
     }
 
@@ -85,12 +84,10 @@ public class MySQLUndoLogManager extends AbstractUndoLogManager {
 
     @Override
     protected void insertUndoLogWithGlobalFinished(String xid, long branchId, UndoLogParser parser, Connection conn) throws SQLException {
-        insertUndoLog(xid, branchId, buildContext(parser.getName()),
-                parser.getDefaultContent(), State.GlobalFinished, conn);
+        insertUndoLog(xid, branchId, buildContext(parser.getName()), parser.getDefaultContent(), State.GlobalFinished, conn);
     }
 
-    private void insertUndoLog(String xid, long branchId, String rollbackCtx,
-                               byte[] undoLogContent, State state, Connection conn) throws SQLException {
+    private void insertUndoLog(String xid, long branchId, String rollbackCtx, byte[] undoLogContent, State state, Connection conn) throws SQLException {
         try (PreparedStatement pst = conn.prepareStatement(INSERT_UNDO_LOG_SQL)) {
             pst.setLong(1, branchId);
             pst.setString(2, xid);

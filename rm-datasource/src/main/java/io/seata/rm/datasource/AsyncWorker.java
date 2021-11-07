@@ -15,20 +15,6 @@
  */
 package io.seata.rm.datasource;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
 import io.seata.common.exception.NotSupportYetException;
 import io.seata.common.exception.ShouldNeverHappenException;
 import io.seata.common.thread.NamedThreadFactory;
@@ -43,8 +29,13 @@ import io.seata.rm.datasource.undo.UndoLogManagerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static io.seata.core.constants.ConfigurationKeys.CLIENT_ASYNC_COMMIT_BUFFER_LIMIT;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.concurrent.*;
+
 import static io.seata.common.DefaultValues.DEFAULT_CLIENT_ASYNC_COMMIT_BUFFER_LIMIT;
+import static io.seata.core.constants.ConfigurationKeys.CLIENT_ASYNC_COMMIT_BUFFER_LIMIT;
 
 /**
  * The type Async worker.
@@ -126,17 +117,14 @@ public class AsyncWorker implements ResourceManagerInbound {
         ScheduledExecutorService timerExecutor = new ScheduledThreadPoolExecutor(1, new NamedThreadFactory("AsyncWorker", 1, true));
         timerExecutor.scheduleAtFixedRate(() -> {
             try {
-
                 doBranchCommits();
-
             } catch (Throwable e) {
                 LOGGER.info("Failed at async committing ... {}", e.getMessage());
-
             }
-        }, 10, 1000 * 1, TimeUnit.MILLISECONDS);
+        }, 10, 1000 * 1, TimeUnit.MILLISECONDS); // 每1s执行一次
     }
 
-    private void doBranchCommits() {
+    private void doBranchCommits() { // 因为都成功了，无需回滚成功的数据，只需要删除生成的操作日志就行，采用异步方式，提高效率
         if (ASYNC_COMMIT_BUFFER.isEmpty()) {
             return;
         }
@@ -154,8 +142,7 @@ public class AsyncWorker implements ResourceManagerInbound {
             DataSourceProxy dataSourceProxy;
             try {
                 try {
-                    DataSourceManager resourceManager = (DataSourceManager) DefaultResourceManager.get()
-                        .getResourceManager(BranchType.AT);
+                    DataSourceManager resourceManager = (DataSourceManager) DefaultResourceManager.get().getResourceManager(BranchType.AT);
                     dataSourceProxy = resourceManager.get(entry.getKey());
                     if (dataSourceProxy == null) {
                         throw new ShouldNeverHappenException("Failed to find resource on " + entry.getKey());
@@ -173,9 +160,8 @@ public class AsyncWorker implements ResourceManagerInbound {
                     branchIds.add(commitContext.branchId);
                     int maxSize = Math.max(xids.size(), branchIds.size());
                     if (maxSize == UNDOLOG_DELETE_LIMIT_SIZE) {
-                        try {
-                            UndoLogManagerFactory.getUndoLogManager(dataSourceProxy.getDbType()).batchDeleteUndoLog(
-                                xids, branchIds, conn);
+                        try { // 删除undo_log记录
+                            UndoLogManagerFactory.getUndoLogManager(dataSourceProxy.getDbType()).batchDeleteUndoLog(xids, branchIds, conn);
                         } catch (Exception ex) {
                             LOGGER.warn("Failed to batch delete undo log [" + branchIds + "/" + xids + "]", ex);
                         }
@@ -188,9 +174,8 @@ public class AsyncWorker implements ResourceManagerInbound {
                     return;
                 }
 
-                try {
-                    UndoLogManagerFactory.getUndoLogManager(dataSourceProxy.getDbType()).batchDeleteUndoLog(xids,
-                        branchIds, conn);
+                try { // 删除undo_log记录
+                    UndoLogManagerFactory.getUndoLogManager(dataSourceProxy.getDbType()).batchDeleteUndoLog(xids, branchIds, conn);
                 } catch (Exception ex) {
                     LOGGER.warn("Failed to batch delete undo log [" + branchIds + "/" + xids + "]", ex);
                 }

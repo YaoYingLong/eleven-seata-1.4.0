@@ -56,7 +56,7 @@ public class DataBaseLocker extends AbstractLocker {
             return true;
         }
         try {
-            return lockStore.acquireLock(convertToLockDO(locks));
+            return lockStore.acquireLock(convertToLockDO(locks)); // 保存到lock_table中
         } catch (StoreException e) {
             throw e;
         } catch (Exception t) {
@@ -84,7 +84,7 @@ public class DataBaseLocker extends AbstractLocker {
     @Override
     public boolean releaseLock(String xid, Long branchId) {
         try {
-            return lockStore.unLock(xid, branchId);
+            return lockStore.unLock(xid, branchId); // DB模式，删除lock_table表锁记录
         } catch (StoreException e) {
             throw e;
         } catch (Exception t) {

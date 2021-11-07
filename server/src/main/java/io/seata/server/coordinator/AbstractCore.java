@@ -66,26 +66,21 @@ public abstract class AbstractCore implements Core {
     public abstract BranchType getHandleBranchType();
 
     @Override
-    public Long branchRegister(BranchType branchType, String resourceId, String clientId, String xid,
-                               String applicationData, String lockKeys) throws TransactionException {
+    public Long branchRegister(BranchType branchType, String resourceId, String clientId, String xid, String applicationData, String lockKeys) throws TransactionException {
         GlobalSession globalSession = assertGlobalSessionNotNull(xid, false);
         return SessionHolder.lockAndExecute(globalSession, () -> {
             globalSessionStatusCheck(globalSession);
             globalSession.addSessionLifecycleListener(SessionHolder.getRootSessionManager());
-            BranchSession branchSession = SessionHelper.newBranchByGlobal(globalSession, branchType, resourceId,
-                    applicationData, lockKeys, clientId);
-            branchSessionLock(globalSession, branchSession);
+            BranchSession branchSession = SessionHelper.newBranchByGlobal(globalSession, branchType, resourceId, applicationData, lockKeys, clientId);
+            branchSessionLock(globalSession, branchSession);  // 获取全局锁，且收集行锁，将其保存到lock_table表
             try {
-                globalSession.addBranch(branchSession);
+                globalSession.addBranch(branchSession); // 向全局Session中添加分支session
             } catch (RuntimeException ex) {
-                branchSessionUnlock(branchSession);
-                throw new BranchTransactionException(FailedToAddBranch, String
-                        .format("Failed to store branch xid = %s branchId = %s", globalSession.getXid(),
-                                branchSession.getBranchId()), ex);
+                branchSessionUnlock(branchSession); // 释放全局锁，DB模式将删除lock_table表对应记录
+                throw new BranchTransactionException(FailedToAddBranch, String.format("Failed to store branch xid = %s branchId = %s", globalSession.getXid(), branchSession.getBranchId()), ex);
             }
             if (LOGGER.isInfoEnabled()) {
-                LOGGER.info("Register branch successfully, xid = {}, branchId = {}, resourceId = {} ,lockKeys = {}",
-                    globalSession.getXid(), branchSession.getBranchId(), resourceId, lockKeys);
+                LOGGER.info("Register branch successfully, xid = {}, branchId = {}, resourceId = {} ,lockKeys = {}", globalSession.getXid(), branchSession.getBranchId(), resourceId, lockKeys);
             }
             return branchSession.getBranchId();
         });
@@ -112,12 +107,11 @@ public abstract class AbstractCore implements Core {
 
     }
 
-    private GlobalSession assertGlobalSessionNotNull(String xid, boolean withBranchSessions)
-            throws TransactionException {
+    private GlobalSession assertGlobalSessionNotNull(String xid, boolean withBranchSessions) throws TransactionException {
+        // DB模式，从数据库获取GlobalSession，若withBranchSessions为true则包括分支事务信息
         GlobalSession globalSession = SessionHolder.findGlobalSession(xid, withBranchSessions);
         if (globalSession == null) {
-            throw new GlobalTransactionException(TransactionExceptionCode.GlobalTransactionNotExist,
-                    String.format("Could not found global transaction xid = %s, may be has finished.", xid));
+            throw new GlobalTransactionException(TransactionExceptionCode.GlobalTransactionNotExist, String.format("Could not found global transaction xid = %s, may be has finished.", xid));
         }
         return globalSession;
     }
@@ -148,7 +142,7 @@ public abstract class AbstractCore implements Core {
 
     @Override
     public BranchStatus branchCommit(GlobalSession globalSession, BranchSession branchSession) throws TransactionException {
-        try {
+        try { // 提交分支事务，RPC调用AsyncWorker#doBranchCommits向RM发起BranchCommitRequest请求
             BranchCommitRequest request = new BranchCommitRequest();
             request.setXid(branchSession.getXid());
             request.setBranchId(branchSession.getBranchId());
@@ -172,14 +166,14 @@ public abstract class AbstractCore implements Core {
 
     @Override
     public BranchStatus branchRollback(GlobalSession globalSession, BranchSession branchSession) throws TransactionException {
-        try {
+        try { // RPC调用RM发送BranchRollbackRequest分支事务回滚请求
             BranchRollbackRequest request = new BranchRollbackRequest();
             request.setXid(branchSession.getXid());
             request.setBranchId(branchSession.getBranchId());
             request.setResourceId(branchSession.getResourceId());
             request.setApplicationData(branchSession.getApplicationData());
             request.setBranchType(branchSession.getBranchType());
-            return branchRollbackSend(request, globalSession, branchSession);
+            return branchRollbackSend(request, globalSession, branchSession); // 最终调用DataSourceManager#branchRollback
         } catch (IOException | TimeoutException e) {
             throw new BranchTransactionException(FailedToSendBranchRollbackRequest,
                     String.format("Send branch rollback failed, xid = %s branchId = %s",
@@ -187,10 +181,8 @@ public abstract class AbstractCore implements Core {
         }
     }
 
-    protected BranchStatus branchRollbackSend(BranchRollbackRequest request, GlobalSession globalSession,
-                                              BranchSession branchSession) throws IOException, TimeoutException {
-        BranchRollbackResponse response = (BranchRollbackResponse) remotingServer.sendSyncRequest(
-                branchSession.getResourceId(), branchSession.getClientId(), request);
+    protected BranchStatus branchRollbackSend(BranchRollbackRequest request, GlobalSession globalSession, BranchSession branchSession) throws IOException, TimeoutException {
+        BranchRollbackResponse response = (BranchRollbackResponse) remotingServer.sendSyncRequest(branchSession.getResourceId(), branchSession.getClientId(), request);
         return response.getBranchStatus();
     }
 
