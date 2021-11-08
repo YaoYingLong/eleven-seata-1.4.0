@@ -51,17 +51,15 @@ public class SeataDataSourceBeanPostProcessor implements BeanPostProcessor {
 
     @Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-        if (bean instanceof DataSource) {
+        if (bean instanceof DataSource) { // 给数据源创建代理对象
             //When not in the excludes, put and init proxy.
             if (!excludes.contains(bean.getClass().getName())) {
                 //Only put and init proxy, not return proxy.
                 DataSourceProxyHolder.get().putDataSource((DataSource) bean, dataSourceProxyMode);
             }
-
             //If is SeataDataSourceProxy, return the original data source.
             if (bean instanceof SeataDataSourceProxy) {
-                LOGGER.info("Unwrap the bean of the data source," +
-                    " and return the original data source to replace the data source proxy.");
+                LOGGER.info("Unwrap the bean of the data source, and return the original data source to replace the data source proxy.");
                 return ((SeataDataSourceProxy) bean).getTargetDataSource();
             }
         }

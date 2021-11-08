@@ -30,16 +30,12 @@ import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
  * @author wangxb
  */
 public class TransactionPropagationIntercepter extends HandlerInterceptorAdapter {
-
-
     private static final Logger LOGGER = LoggerFactory.getLogger(TransactionPropagationIntercepter.class);
-
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         String xid = RootContext.getXID();
         String rpcXid = request.getHeader(RootContext.KEY_XID);
-
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("xid in RootContext[{}] xid in HttpContext[{}]", xid, rpcXid);
         }
@@ -49,13 +45,11 @@ public class TransactionPropagationIntercepter extends HandlerInterceptorAdapter
                 LOGGER.debug("bind[{}] to RootContext", rpcXid);
             }
         }
-
         return true;
     }
 
     @Override
-    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,
-        ModelAndView modelAndView) {
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) {
         if (RootContext.inGlobalTransaction()) {
             XidResource.cleanXid(request.getHeader(RootContext.KEY_XID));
         }

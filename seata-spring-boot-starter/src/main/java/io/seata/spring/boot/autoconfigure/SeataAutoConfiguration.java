@@ -75,7 +75,6 @@ public class SeataAutoConfiguration {
     @Configuration
     @ConditionalOnProperty(prefix = StarterConstants.SEATA_PREFIX, name = {"enableAutoDataSourceProxy", "enable-auto-data-source-proxy"}, havingValue = "true", matchIfMissing = true)
     static class SeataDataSourceConfiguration {
-
         /**
          * The bean seataDataSourceBeanPostProcessor.
          */
@@ -91,8 +90,7 @@ public class SeataAutoConfiguration {
         @Bean(BEAN_NAME_SEATA_AUTO_DATA_SOURCE_PROXY_CREATOR)
         @ConditionalOnMissingBean(SeataAutoDataSourceProxyCreator.class)
         public SeataAutoDataSourceProxyCreator seataAutoDataSourceProxyCreator(SeataProperties seataProperties) {
-            return new SeataAutoDataSourceProxyCreator(seataProperties.isUseJdkProxy(),
-                    seataProperties.getExcludesForAutoProxying(), seataProperties.getDataSourceProxyMode());
+            return new SeataAutoDataSourceProxyCreator(seataProperties.isUseJdkProxy(), seataProperties.getExcludesForAutoProxying(), seataProperties.getDataSourceProxyMode());
         }
     }
 }

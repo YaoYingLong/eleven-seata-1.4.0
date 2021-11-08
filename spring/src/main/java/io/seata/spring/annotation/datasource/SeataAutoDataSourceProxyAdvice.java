@@ -46,24 +46,21 @@ public class SeataAutoDataSourceProxyAdvice implements MethodInterceptor, Introd
         } else {
             throw new IllegalArgumentException("Unknown dataSourceProxyMode: " + dataSourceProxyMode);
         }
-
         //Set the default branch type in the RootContext.
         RootContext.setDefaultBranchType(this.dataSourceProxyMode);
     }
 
     @Override
     public Object invoke(MethodInvocation invocation) throws Throwable {
-        if (!RootContext.requireGlobalLock()
-                && dataSourceProxyMode != RootContext.getBranchType()) {
+        if (!RootContext.requireGlobalLock() && dataSourceProxyMode != RootContext.getBranchType()) {
             return invocation.proceed();
         }
-
         Method method = invocation.getMethod();
         Object[] args = invocation.getArguments();
         Method m = BeanUtils.findDeclaredMethod(dataSourceProxyClazz, method.getName(), method.getParameterTypes());
         if (m != null) {
             SeataDataSourceProxy dataSourceProxy = DataSourceProxyHolder.get().putDataSource((DataSource) invocation.getThis(), dataSourceProxyMode);
-            return m.invoke(dataSourceProxy, args);
+            return m.invoke(dataSourceProxy, args); // 调用DataSourceProxy的代理方法
         } else {
             return invocation.proceed();
         }

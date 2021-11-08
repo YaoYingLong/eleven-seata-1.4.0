@@ -41,8 +41,7 @@ public class ConfigurationCache implements ConfigurationChangeListener {
             return;
         }
         synchronized (ConfigurationCache.class) {
-            HashSet<ConfigurationChangeListener> listenerHashSet =
-                getInstance().configListenersMap.computeIfAbsent(dataId, key -> new HashSet<>());
+            HashSet<ConfigurationChangeListener> listenerHashSet = getInstance().configListenersMap.computeIfAbsent(dataId, key -> new HashSet<>());
             if (!listenerHashSet.contains(getInstance())) {
                 ConfigurationFactory.getInstance().addConfigListener(dataId, getInstance());
                 listenerHashSet.add(getInstance());

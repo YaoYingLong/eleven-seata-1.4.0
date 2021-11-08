@@ -30,7 +30,7 @@ import org.springframework.beans.BeansException;
 /**
  * @author xingfudeshi@gmail.com
  */
-public class SeataAutoDataSourceProxyCreator extends AbstractAutoProxyCreator {
+public class SeataAutoDataSourceProxyCreator extends AbstractAutoProxyCreator { // 给DataSource自动创建代理
     private static final Logger LOGGER = LoggerFactory.getLogger(SeataAutoDataSourceProxyCreator.class);
     private final List<String> excludes;
     private final Advisor advisor;
@@ -51,8 +51,6 @@ public class SeataAutoDataSourceProxyCreator extends AbstractAutoProxyCreator {
 
     @Override
     protected boolean shouldSkip(Class<?> beanClass, String beanName) {
-        return !DataSource.class.isAssignableFrom(beanClass) ||
-            SeataProxy.class.isAssignableFrom(beanClass) ||
-            excludes.contains(beanClass.getName());
+        return !DataSource.class.isAssignableFrom(beanClass) || SeataProxy.class.isAssignableFrom(beanClass) || excludes.contains(beanClass.getName());
     }
 }

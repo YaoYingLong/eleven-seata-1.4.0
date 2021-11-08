@@ -173,7 +173,6 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
                 public Object execute() throws Throwable {
                     return methodInvocation.proceed();
                 }
-
                 public String name() {
                     String name = globalTrxAnno.name();
                     if (!StringUtils.isNullOrEmpty(name)) {
@@ -181,10 +180,8 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
                     }
                     return formatMethod(methodInvocation.getMethod()); // 被@GlobalTransactional注解标注的方法的签名
                 }
-
                 @Override
-                public TransactionInfo getTransactionInfo() {
-                    // reset the value of timeout
+                public TransactionInfo getTransactionInfo() { // reset the value of timeout
                     int timeout = globalTrxAnno.timeoutMills(); // 全局事务超时时间
                     if (timeout <= 0 || timeout == DEFAULT_GLOBAL_TRANSACTION_TIMEOUT) {
                         timeout = defaultGlobalTransactionTimeout;
@@ -277,7 +274,7 @@ public class GlobalTransactionalInterceptor implements ConfigurationChangeListen
     /**
      * auto upgrade service detection
      */
-    private static void startDegradeCheck() {
+    private static void startDegradeCheck() { // 降级检测异步任务
         executor.scheduleAtFixedRate(() -> {
             if (degradeCheck) {
                 try {

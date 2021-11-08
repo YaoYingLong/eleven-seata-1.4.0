@@ -45,8 +45,7 @@ import java.util.concurrent.TimeoutException;
 public class DefaultTransactionManager implements TransactionManager {
 
     @Override
-    public String begin(String applicationId, String transactionServiceGroup, String name, int timeout)
-        throws TransactionException {
+    public String begin(String applicationId, String transactionServiceGroup, String name, int timeout) throws TransactionException {
         GlobalBeginRequest request = new GlobalBeginRequest();
         request.setTransactionName(name);
         request.setTimeout(timeout);

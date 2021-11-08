@@ -119,8 +119,7 @@ public class SpringProxyUtils {
             return false;
         }
         //check dubbo proxy ?
-        return DubboUtil.isDubboProxyName(bean.getClass().getName()) || (Proxy.class.isAssignableFrom(bean.getClass())
-                || AopUtils.isAopProxy(bean));
+        return DubboUtil.isDubboProxyName(bean.getClass().getName()) || (Proxy.class.isAssignableFrom(bean.getClass()) || AopUtils.isAopProxy(bean));
     }
 
     /**
