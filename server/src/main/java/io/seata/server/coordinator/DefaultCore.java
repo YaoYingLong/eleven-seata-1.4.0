@@ -48,7 +48,7 @@ public class DefaultCore implements Core {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultCore.class);
 
-    private EventBus eventBus = EventBusManager.get();
+    private EventBus eventBus = EventBusManager.get(); // 做一些统计监听的
 
     private static Map<BranchType, AbstractCore> coreMap = new ConcurrentHashMap<>();
 
@@ -93,8 +93,7 @@ public class DefaultCore implements Core {
 
     @Override
     public Long branchRegister(BranchType branchType, String resourceId, String clientId, String xid, String applicationData, String lockKeys) throws TransactionException {
-        return getCore(branchType).branchRegister(branchType, resourceId, clientId, xid,
-            applicationData, lockKeys);
+        return getCore(branchType).branchRegister(branchType, resourceId, clientId, xid, applicationData, lockKeys);
     }
 
     @Override
@@ -132,12 +131,11 @@ public class DefaultCore implements Core {
     @Override
     public GlobalStatus commit(String xid) throws TransactionException {
         GlobalSession globalSession = SessionHolder.findGlobalSession(xid); // DB模式查询global_table表
-        if (globalSession == null) {
+        if (globalSession == null) { // 若查询不到全局事务则返回失败
             return GlobalStatus.Finished;
         }
         globalSession.addSessionLifecycleListener(SessionHolder.getRootSessionManager());
         // just lock changeStatus
-
         boolean shouldCommit = SessionHolder.lockAndExecute(globalSession, () -> {
             // Highlight: Firstly, close the session, then no more branch can be registered.
             globalSession.closeAndClean();
@@ -152,7 +150,6 @@ public class DefaultCore implements Core {
             }
             return false;
         });
-
         if (shouldCommit) {
             boolean success = doGlobalCommit(globalSession, false);
             if (success && !globalSession.getBranchSessions().isEmpty()) {

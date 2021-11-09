@@ -210,8 +210,7 @@ public abstract class BaseTransactionalExecutor<T, S extends Statement> implemen
             return tableMeta;
         }
         ConnectionProxy connectionProxy = statementProxy.getConnectionProxy();
-        tableMeta = TableMetaCacheFactory.getTableMetaCache(connectionProxy.getDbType())
-            .getTableMeta(connectionProxy.getTargetConnection(), tableName, connectionProxy.getDataSourceProxy().getResourceId());
+        tableMeta = TableMetaCacheFactory.getTableMetaCache(connectionProxy.getDbType()).getTableMeta(connectionProxy.getTargetConnection(), tableName, connectionProxy.getDataSourceProxy().getResourceId());
         return tableMeta;
     }
 
@@ -269,13 +268,11 @@ public abstract class BaseTransactionalExecutor<T, S extends Statement> implemen
             return;
         }
         ConnectionProxy connectionProxy = statementProxy.getConnectionProxy();
-
         TableRecords lockKeyRecords = sqlRecognizer.getSQLType() == SQLType.DELETE ? beforeImage : afterImage;
         String lockKeys = buildLockKey(lockKeyRecords);
         connectionProxy.appendLockKey(lockKeys);
-
         SQLUndoLog sqlUndoLog = buildUndoItem(beforeImage, afterImage); // 将前置镜像和后置镜像封装为SQLUndoLog
-        connectionProxy.appendUndoLog(sqlUndoLog);  // 缓存sqlUndoLog对象
+        connectionProxy.appendUndoLog(sqlUndoLog);  // 缓存sqlUndoLog对象，并未插入到数据库
     }
 
     /**

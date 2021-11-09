@@ -62,7 +62,6 @@ public class LockRetryController {
         if (--lockRetryTimes < 0) { // lockRetryTimes默认30次
             throw new LockWaitTimeoutException("Global lock wait timeout", e);
         }
-
         try {
             Thread.sleep(lockRetryInternal); // 默认休眠10ms
         } catch (InterruptedException ignore) {

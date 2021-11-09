@@ -110,7 +110,7 @@ public abstract class AbstractCore implements Core {
     private GlobalSession assertGlobalSessionNotNull(String xid, boolean withBranchSessions) throws TransactionException {
         // DB模式，从数据库获取GlobalSession，若withBranchSessions为true则包括分支事务信息
         GlobalSession globalSession = SessionHolder.findGlobalSession(xid, withBranchSessions);
-        if (globalSession == null) {
+        if (globalSession == null) { // 若查询不到可能是事务超时了，则抛出异常
             throw new GlobalTransactionException(TransactionExceptionCode.GlobalTransactionNotExist, String.format("Could not found global transaction xid = %s, may be has finished.", xid));
         }
         return globalSession;

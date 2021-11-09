@@ -78,8 +78,7 @@ public class DataBaseSessionManager extends AbstractSessionManager implements In
 
     @Override
     public void addGlobalSession(GlobalSession session) throws TransactionException {
-        if (StringUtils.isBlank(taskName)) {
-            // 调用实现类DataBaseTransactionStoreManager的writeSession，将全局事务信息插入global_table表中
+        if (StringUtils.isBlank(taskName)) {// 调用实现类DataBaseTransactionStoreManager的writeSession，将全局事务信息插入global_table表中
             boolean ret = transactionStoreManager.writeSession(LogOperation.GLOBAL_ADD, session);
             if (!ret) {
                 throw new StoreException("addGlobalSession failed.");

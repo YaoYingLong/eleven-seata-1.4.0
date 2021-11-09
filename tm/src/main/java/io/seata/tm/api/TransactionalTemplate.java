@@ -54,35 +54,35 @@ public class TransactionalTemplate {
             throw new ShouldNeverHappenException("transactionInfo does not exist");
         }
         // 1.1 Get current transaction, if not null, the tx role is 'GlobalTransactionRole.Participant'.
+        // 获取当前全局事务，若不为空，则交易角色为GlobalTransactionRole.Participant
         GlobalTransaction tx = GlobalTransactionContext.getCurrent();
-
         // 1.2 Handle the transaction propagation.
-        Propagation propagation = txInfo.getPropagation();
+        Propagation propagation = txInfo.getPropagation(); // 获取当前全局事务的传播属性
         SuspendedResourcesHolder suspendedResourcesHolder = null;
         try {
-            switch (propagation) {
-                case NOT_SUPPORTED:
+            switch (propagation) { // 根据事务的传播属性做相应的处理
+                case NOT_SUPPORTED: // 若事务存在，则将其暂停
                     // If transaction is existing, suspend it.
                     if (existingTransaction(tx)) {
                         suspendedResourcesHolder = tx.suspend();
                     }
                     // Execute without transaction and return.
-                    return business.execute();
-                case REQUIRES_NEW:
+                    return business.execute(); // 若不存在事务则直接执行业务方法
+                case REQUIRES_NEW: // 若事务存在，则暂停它，然后开始新的事务
                     // If transaction is existing, suspend it, and then begin new transaction.
                     if (existingTransaction(tx)) {
                         suspendedResourcesHolder = tx.suspend();
                         tx = GlobalTransactionContext.createNew();
                     }
                     // Continue and execute with new transaction
-                    break;
-                case SUPPORTS:
+                    break; // 继续执行新的事务
+                case SUPPORTS: // 若事务不存在，则在没有事务的情况下执行
                     // If transaction is not existing, execute without transaction.
                     if (notExistingTransaction(tx)) {
                         return business.execute();
                     }
                     // Continue and execute with new transaction
-                    break;
+                    break; // 若事务存在，继续执行事务
                 case REQUIRED:
                     // If current transaction is existing, execute with current transaction,
                     // else continue and execute with new transaction.
@@ -107,42 +107,30 @@ public class TransactionalTemplate {
                 default:
                     throw new TransactionException("Not Supported Propagation:" + propagation);
             }
-
             // 1.3 If null, create new transaction with role 'GlobalTransactionRole.Launcher'.
-            if (tx == null) {
+            if (tx == null) { // 若当前全局事务为null，则创建角色为GlobalTransactionRole.Launcher的新事务
                 tx = GlobalTransactionContext.createNew();
             }
-
             // set current tx config to holder
             GlobalLockConfig previousConfig = replaceGlobalLockConfig(txInfo);
-
-            try {
-                // 2. If the tx role is 'GlobalTransactionRole.Launcher', send the request of beginTransaction to TC,
-                //    else do nothing. Of course, the hooks will still be triggered.
-                beginTransaction(txInfo, tx); // 开启全局事务
-
+            try {// 2. If the tx role is 'GlobalTransactionRole.Launcher', send the request of beginTransaction to TC, else do nothing. Of course, the hooks will still be triggered.
+                beginTransaction(txInfo, tx); // 若tx角色是GlobalTransactionRole.Launcher，则发送beginTransaction的请求给TC，否则什么都不做
                 Object rs;
-                try {
-                    // Do Your Business
+                try {// Do Your Business
                     rs = business.execute(); // 执行业务逻辑
-                } catch (Throwable ex) {
-                    // 3. The needed business exception to rollback.
+                } catch (Throwable ex) { // 3. The needed business exception to rollback.
                     completeTransactionAfterThrowing(txInfo, tx, ex);
                     throw ex;
                 }
-
                 // 4. everything is fine, commit.
                 commitTransaction(tx); // 提交全局事务
-
                 return rs;
-            } finally {
-                //5. clear
+            } finally {//5. clear
                 resumeGlobalLockConfig(previousConfig);
                 triggerAfterCompletion();
                 cleanUp();
             }
-        } finally {
-            // If the transaction is suspended, resume it.
+        } finally { // If the transaction is suspended, resume it.
             if (suspendedResourcesHolder != null) {
                 tx.resume(suspendedResourcesHolder);
             }
@@ -192,10 +180,8 @@ public class TransactionalTemplate {
             triggerBeforeCommit();
             tx.commit(); // 提交全局事务
             triggerAfterCommit();
-        } catch (TransactionException txe) {
-            // 4.1 Failed to commit
-            throw new TransactionalExecutor.ExecutionException(tx, txe,
-                TransactionalExecutor.Code.CommitFailure);
+        } catch (TransactionException txe) {// 4.1 Failed to commit
+            throw new TransactionalExecutor.ExecutionException(tx, txe, TransactionalExecutor.Code.CommitFailure);
         }
     }
 
@@ -214,8 +200,7 @@ public class TransactionalTemplate {
             tx.begin(txInfo.getTimeOut(), txInfo.getName()); // 开启全局事务
             triggerAfterBegin();
         } catch (TransactionException txe) {
-            throw new TransactionalExecutor.ExecutionException(tx, txe,
-                TransactionalExecutor.Code.BeginFailure);
+            throw new TransactionalExecutor.ExecutionException(tx, txe, TransactionalExecutor.Code.BeginFailure);
 
         }
     }

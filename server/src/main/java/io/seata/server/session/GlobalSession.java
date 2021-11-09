@@ -236,7 +236,7 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
     @Override
     public void addBranch(BranchSession branchSession) throws TransactionException {
         for (SessionLifecycleListener lifecycleListener : lifecycleListeners) {
-            lifecycleListener.onAddBranch(this, branchSession);
+            lifecycleListener.onAddBranch(this, branchSession); // 将分支事务信息保存到branch_table表中
         }
         branchSession.setStatus(BranchStatus.Registered); // 设置分支session状态是已注册
         add(branchSession);

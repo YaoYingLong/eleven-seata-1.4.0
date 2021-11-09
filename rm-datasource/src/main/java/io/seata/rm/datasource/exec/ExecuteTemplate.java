@@ -44,9 +44,7 @@ public class ExecuteTemplate {
      * @return the t
      * @throws SQLException the sql exception
      */
-    public static <T, S extends Statement> T execute(StatementProxy<S> statementProxy,
-                                                     StatementCallback<T, S> statementCallback,
-                                                     Object... args) throws SQLException {
+    public static <T, S extends Statement> T execute(StatementProxy<S> statementProxy, StatementCallback<T, S> statementCallback, Object... args) throws SQLException {
         return execute(null, statementProxy, statementCallback, args);
     }
 
@@ -74,7 +72,7 @@ public class ExecuteTemplate {
         }
 
         String dbType = statementProxy.getConnectionProxy().getDbType();
-        if (CollectionUtils.isEmpty(sqlRecognizers)) {
+        if (CollectionUtils.isEmpty(sqlRecognizers)) { // 一般sqlRecognizers为null
             sqlRecognizers = SQLVisitorFactory.get(statementProxy.getTargetSQL(), dbType);
         }
         Executor<T> executor;

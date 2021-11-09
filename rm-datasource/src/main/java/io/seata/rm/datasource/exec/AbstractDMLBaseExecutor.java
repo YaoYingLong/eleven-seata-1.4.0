@@ -79,8 +79,8 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
 
     @Override
     public T doExecute(Object... args) throws Throwable { // 这里将事务的自动提交设置为手动提交
-        AbstractConnectionProxy connectionProxy = statementProxy.getConnectionProxy();
-        if (connectionProxy.getAutoCommit()) {
+        AbstractConnectionProxy connectionProxy = statementProxy.getConnectionProxy(); // 获取到代理的Connection
+        if (connectionProxy.getAutoCommit()) { // 第一次默认为true
             return executeAutoCommitTrue(args); // 本地事务提交逻辑，这里会将事务设置为手动提交
         } else {
             return executeAutoCommitFalse(args); // 设置本地事务提交逻辑为手动提交
@@ -147,7 +147,7 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
             // when exception occur in finally,this exception will lost, so just print it here
             LOGGER.error("execute executeAutoCommitTrue error:{}", e.getMessage(), e);
             if (!LockRetryPolicy.isLockRetryPolicyBranchRollbackOnConflict()) {
-                connectionProxy.getTargetConnection().rollback();
+                connectionProxy.getTargetConnection().rollback(); // 回滚本地事务
             }
             throw e;
         } finally {
