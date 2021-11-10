@@ -209,10 +209,8 @@ public abstract class AbstractConnectionProxy implements Connection {
     }
 
     @Override
-    public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency)
-            throws SQLException {
-        PreparedStatement preparedStatement = targetConnection.prepareStatement(sql, resultSetType,
-                resultSetConcurrency);
+    public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency) throws SQLException {
+        PreparedStatement preparedStatement = targetConnection.prepareStatement(sql, resultSetType, resultSetConcurrency);
         return new PreparedStatementProxy(this, preparedStatement, sql);
     }
 

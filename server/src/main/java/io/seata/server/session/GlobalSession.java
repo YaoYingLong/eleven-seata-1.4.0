@@ -192,11 +192,9 @@ public class GlobalSession implements SessionLifecycle, SessionStorable {
     public void end() throws TransactionException {
         // Clean locks first
         clean(); // 释放锁
-
         for (SessionLifecycleListener lifecycleListener : lifecycleListeners) {
             lifecycleListener.onEnd(this); // 删除全局事务信息
         }
-
     }
 
     public void clean() throws TransactionException {

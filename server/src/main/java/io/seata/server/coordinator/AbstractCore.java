@@ -117,20 +117,16 @@ public abstract class AbstractCore implements Core {
     }
 
     @Override
-    public void branchReport(BranchType branchType, String xid, long branchId, BranchStatus status,
-                             String applicationData) throws TransactionException {
+    public void branchReport(BranchType branchType, String xid, long branchId, BranchStatus status, String applicationData) throws TransactionException {
         GlobalSession globalSession = assertGlobalSessionNotNull(xid, true);
         BranchSession branchSession = globalSession.getBranch(branchId);
         if (branchSession == null) {
-            throw new BranchTransactionException(BranchTransactionNotExist,
-                    String.format("Could not found branch session xid = %s branchId = %s", xid, branchId));
+            throw new BranchTransactionException(BranchTransactionNotExist, String.format("Could not found branch session xid = %s branchId = %s", xid, branchId));
         }
         globalSession.addSessionLifecycleListener(SessionHolder.getRootSessionManager());
         globalSession.changeBranchStatus(branchSession, status);
-
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("Report branch status successfully, xid = {}, branchId = {}", globalSession.getXid(),
-                branchSession.getBranchId());
+            LOGGER.info("Report branch status successfully, xid = {}, branchId = {}", globalSession.getXid(), branchSession.getBranchId());
         }
     }
 
@@ -151,9 +147,7 @@ public abstract class AbstractCore implements Core {
             request.setBranchType(branchSession.getBranchType());
             return branchCommitSend(request, globalSession, branchSession);
         } catch (IOException | TimeoutException e) {
-            throw new BranchTransactionException(FailedToSendBranchCommitRequest,
-                    String.format("Send branch commit failed, xid = %s branchId = %s", branchSession.getXid(),
-                            branchSession.getBranchId()), e);
+            throw new BranchTransactionException(FailedToSendBranchCommitRequest, String.format("Send branch commit failed, xid = %s branchId = %s", branchSession.getXid(), branchSession.getBranchId()), e);
         }
     }
 

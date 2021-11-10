@@ -238,22 +238,18 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
         for (; ; ) {
             try {
                 conn = dataSourceProxy.getPlainConnection();
-
                 // The entire undo process should run in a local transaction.
                 if (originalAutoCommit = conn.getAutoCommit()) {
                     conn.setAutoCommit(false);
                 }
-
                 // Find UNDO LOG 找到undolog
                 selectPST = conn.prepareStatement(SELECT_UNDO_LOG_SQL);
                 selectPST.setLong(1, branchId);
                 selectPST.setString(2, xid);
                 rs = selectPST.executeQuery();
-
                 boolean exists = false;
                 while (rs.next()) {
                     exists = true;
-
                     // It is possible that the server repeatedly sends a rollback request to roll back
                     // the same branch transaction to multiple processes,
                     // ensuring that only the undo_log in the normal state is processed.
@@ -264,16 +260,12 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
                         }
                         return;
                     }
-
                     String contextString = rs.getString(ClientTableColumnsName.UNDO_LOG_CONTEXT);
                     Map<String, String> context = parseContext(contextString);
                     byte[] rollbackInfo = getRollbackInfo(rs);
-
                     String serializer = context == null ? null : context.get(UndoLogConstants.SERIALIZER_KEY);
-                    UndoLogParser parser = serializer == null ? UndoLogParserFactory.getInstance()
-                        : UndoLogParserFactory.getInstance(serializer);
+                    UndoLogParser parser = serializer == null ? UndoLogParserFactory.getInstance() : UndoLogParserFactory.getInstance(serializer);
                     BranchUndoLog branchUndoLog = parser.decode(rollbackInfo);
-
                     try {
                         // put serializer name to local
                         setCurrentSerializer(parser.getName());
@@ -282,18 +274,15 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
                             Collections.reverse(sqlUndoLogs);
                         }
                         for (SQLUndoLog sqlUndoLog : sqlUndoLogs) {
-                            TableMeta tableMeta = TableMetaCacheFactory.getTableMetaCache(dataSourceProxy.getDbType()).getTableMeta(
-                                conn, sqlUndoLog.getTableName(), dataSourceProxy.getResourceId());
+                            TableMeta tableMeta = TableMetaCacheFactory.getTableMetaCache(dataSourceProxy.getDbType()).getTableMeta(conn, sqlUndoLog.getTableName(), dataSourceProxy.getResourceId());
                             sqlUndoLog.setTableMeta(tableMeta);
                             AbstractUndoExecutor undoExecutor = UndoExecutorFactory.getUndoExecutor(dataSourceProxy.getDbType(), sqlUndoLog);
                             undoExecutor.executeOn(conn); // 执行rollback补偿
                         }
-                    } finally {
-                        // remove serializer name
+                    } finally { // remove serializer name
                         removeCurrentSerializer();
                     }
                 }
-
                 // If undo_log exists, it means that the branch transaction has completed the first phase,
                 // we can directly roll back and clean the undo_log
                 // Otherwise, it indicates that there is an exception in the branch transaction,
@@ -302,7 +291,6 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
                 // To ensure data consistency, we can insert an undo_log with GlobalFinished state
                 // to prevent the local transaction of the first phase of other programs from being correctly submitted.
                 // See https://github.com/seata/seata/issues/489
-
                 if (exists) {
                     deleteUndoLog(xid, branchId, conn); // 删除undo_log
                     conn.commit();
@@ -332,7 +320,6 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
                     }
                 }
                 throw new BranchTransactionException(BranchRollbackFailed_Retriable, String.format("Branch session rollback failed and try again later xid = %s branchId = %s %s", xid, branchId, e.getMessage()), e);
-
             } finally {
                 try {
                     if (rs != null) {

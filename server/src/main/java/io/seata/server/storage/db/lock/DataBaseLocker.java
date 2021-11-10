@@ -95,8 +95,7 @@ public class DataBaseLocker extends AbstractLocker {
 
     @Override
     public boolean releaseLock(String xid, List<Long> branchIds) {
-        if (CollectionUtils.isEmpty(branchIds)) {
-            // no lock
+        if (CollectionUtils.isEmpty(branchIds)) {// no lock
             return true;
         }
         try {
