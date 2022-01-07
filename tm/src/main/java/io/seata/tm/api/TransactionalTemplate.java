@@ -89,10 +89,9 @@ public class TransactionalTemplate {
                     break;
                 case NEVER:
                     // If transaction is existing, throw exception.
-                    if (existingTransaction(tx)) {
+                    if (existingTransaction(tx)) { // 判断tx是否为null
                         throw new TransactionException(
-                            String.format("Existing transaction found for transaction marked with propagation 'never', xid = %s"
-                                    , tx.getXid()));
+                            String.format("Existing transaction found for transaction marked with propagation 'never', xid = %s", tx.getXid()));
                     } else {
                         // Execute without transaction and return.
                         return business.execute();

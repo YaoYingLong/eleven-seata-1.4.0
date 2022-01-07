@@ -51,6 +51,7 @@ public class SeataAutoDataSourceProxyCreator extends AbstractAutoProxyCreator { 
 
     @Override
     protected boolean shouldSkip(Class<?> beanClass, String beanName) {
+        // beanClass是DataSource的子类 && beanClass不是beanClass的子类 && beanClass没有被排除，则创建通过SeataAutoDataSourceProxyAdvice创建代理
         return !DataSource.class.isAssignableFrom(beanClass) || SeataProxy.class.isAssignableFrom(beanClass) || excludes.contains(beanClass.getName());
     }
 }

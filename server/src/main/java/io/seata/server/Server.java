@@ -104,7 +104,6 @@ public class Server {
             logger.error("nettyServer init error:{}", e.getMessage(), e);
             System.exit(-1);
         }
-
         System.exit(0);
     }
 }
