@@ -97,12 +97,10 @@ public class AsyncWorker implements ResourceManagerInbound {
     private static int ASYNC_COMMIT_BUFFER_LIMIT = ConfigurationFactory.getInstance().getInt(
         CLIENT_ASYNC_COMMIT_BUFFER_LIMIT, DEFAULT_CLIENT_ASYNC_COMMIT_BUFFER_LIMIT);
 
-    private static final BlockingQueue<Phase2Context> ASYNC_COMMIT_BUFFER = new LinkedBlockingQueue<>(
-        ASYNC_COMMIT_BUFFER_LIMIT);
+    private static final BlockingQueue<Phase2Context> ASYNC_COMMIT_BUFFER = new LinkedBlockingQueue<>(ASYNC_COMMIT_BUFFER_LIMIT);
 
     @Override
-    public BranchStatus branchCommit(BranchType branchType, String xid, long branchId, String resourceId,
-                                     String applicationData) throws TransactionException {
+    public BranchStatus branchCommit(BranchType branchType, String xid, long branchId, String resourceId, String applicationData) throws TransactionException {
         if (!ASYNC_COMMIT_BUFFER.offer(new Phase2Context(branchType, xid, branchId, resourceId, applicationData))) {
             LOGGER.warn("Async commit buffer is FULL. Rejected branch [{}/{}] will be handled by housekeeping later.", branchId, xid);
         }
@@ -128,7 +126,6 @@ public class AsyncWorker implements ResourceManagerInbound {
         if (ASYNC_COMMIT_BUFFER.isEmpty()) {
             return;
         }
-
         Map<String, List<Phase2Context>> mappedContexts = new HashMap<>(DEFAULT_RESOURCE_SIZE);
         List<Phase2Context> contextsGroupedByResourceId;
         while (!ASYNC_COMMIT_BUFFER.isEmpty()) {
@@ -136,7 +133,6 @@ public class AsyncWorker implements ResourceManagerInbound {
             contextsGroupedByResourceId = CollectionUtils.computeIfAbsent(mappedContexts, commitContext.resourceId, key -> new ArrayList<>());
             contextsGroupedByResourceId.add(commitContext);
         }
-
         for (Map.Entry<String, List<Phase2Context>> entry : mappedContexts.entrySet()) {
             Connection conn = null;
             DataSourceProxy dataSourceProxy;
@@ -169,17 +165,14 @@ public class AsyncWorker implements ResourceManagerInbound {
                         branchIds.clear();
                     }
                 }
-
                 if (CollectionUtils.isEmpty(xids) || CollectionUtils.isEmpty(branchIds)) {
                     return;
                 }
-
                 try { // 删除undo_log记录
                     UndoLogManagerFactory.getUndoLogManager(dataSourceProxy.getDbType()).batchDeleteUndoLog(xids, branchIds, conn);
                 } catch (Exception ex) {
                     LOGGER.warn("Failed to batch delete undo log [" + branchIds + "/" + xids + "]", ex);
                 }
-
                 if (!conn.getAutoCommit()) {
                     conn.commit();
                 }
@@ -205,8 +198,7 @@ public class AsyncWorker implements ResourceManagerInbound {
     }
 
     @Override
-    public BranchStatus branchRollback(BranchType branchType, String xid, long branchId, String resourceId,
-                                       String applicationData) throws TransactionException {
+    public BranchStatus branchRollback(BranchType branchType, String xid, long branchId, String resourceId, String applicationData) throws TransactionException {
         throw new NotSupportYetException();
 
     }

@@ -315,19 +315,19 @@ public class DefaultCoordinator extends AbstractTCInboundHandler implements Tran
     /**
      * Handle async committing.
      */
-    protected void handleAsyncCommitting() {
+    protected void handleAsyncCommitting() { // 获取所有状态为AsyncCommitting的全局事务
         Collection<GlobalSession> asyncCommittingSessions = SessionHolder.getAsyncCommittingSessionManager().allSessions();
         if (CollectionUtils.isEmpty(asyncCommittingSessions)) {
             return;
         }
-        for (GlobalSession asyncCommittingSession : asyncCommittingSessions) {
+        for (GlobalSession asyncCommittingSession : asyncCommittingSessions) { // 遍历全局事务
             try {
                 // Instruction reordering in DefaultCore#asyncCommit may cause this situation
                 if (GlobalStatus.AsyncCommitting != asyncCommittingSession.getStatus()) {
                     continue;
                 }
                 asyncCommittingSession.addSessionLifecycleListener(SessionHolder.getRootSessionManager());
-                core.doGlobalCommit(asyncCommittingSession, true);
+                core.doGlobalCommit(asyncCommittingSession, true); // 遍历分支事务提交
             } catch (TransactionException ex) {
                 LOGGER.error("Failed to async committing [{}] {} {}", asyncCommittingSession.getXid(), ex.getCode(), ex.getMessage(), ex);
             }
